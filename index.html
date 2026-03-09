@@ -1,149 +1,147 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<title>Event Registration | Test ₹1</title>
-<link rel="stylesheet" href="css/style.css" />
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+    <title>Event Registration | Test ₹1</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
 </head>
 <body>
-<div class="container">
-  <div class="header">
-    <h1><i class="fas fa-ticket-alt"></i> Seminar Registration</h1>
-    <p class="tagline">Test Mode • ₹1 Payment • Instant Confirmation</p>
-  </div>
-  
-  <form id="regForm">
-    <div class="form-row">
-      <div class="field">
-        <label><i class="fas fa-user"></i> Name <span class="req">*</span></label>
-        <input type="text" id="name" placeholder="Your Full Name" required autocomplete="name">
-      </div>
-      <div class="field">
-        <label><i class="fas fa-briefcase"></i> Designation <span class="req">*</span></label>
-        <input type="text" id="designation" placeholder="e.g., Manager" required autocomplete="organization-title">
-      </div>
-    </div>
-    
-    <div class="form-row">
-      <div class="field">
-        <label><i class="fas fa-building"></i> Company <span class="req">*</span></label>
-        <input type="text" id="company" placeholder="Your Company" required autocomplete="organization">
-      </div>
-      <div class="field">
-        <label><i class="fas fa-users"></i> Employees</label>
-        <select id="employees" autocomplete="off">
-          <option value="">Select</option>
-          <option value="1-10">1-10</option>
-          <option value="11-50">11-50</option>
-          <option value="51-200">51-200</option>
-          <option value="200+">200+</option>
-        </select>
-      </div>
-    </div>
-    
-    <div class="form-row">
-      <div class="field">
-        <label><i class="fas fa-phone"></i> Contact <span class="req">*</span></label>
-        <input type="tel" id="phone" placeholder="9876543210" pattern="[0-9]{10}" required autocomplete="tel">
-      </div>
-      <div class="field">
-        <label><i class="fas fa-envelope"></i> Email <span class="req">*</span></label>
-        <input type="email" id="email" placeholder="you@email.com" required autocomplete="email">
-      </div>
-    </div>
-    
-    <div class="form-row">
-      <div class="field">
-        <label><i class="fas fa-city"></i> City <span class="req">*</span></label>
-        <input type="text" id="city" placeholder="Your City" required autocomplete="address-level2">
-      </div>
-      <div class="field">
-        <label><i class="fas fa-star"></i> Rating</label>
-        <div class="star-rating" id="starRating" role="radiogroup" aria-label="Rating">
-          <input type="radio" id="star5" name="rating" value="5"><label for="star5" title="5 stars">★</label>
-          <input type="radio" id="star4" name="rating" value="4"><label for="star4" title="4 stars">★</label>
-          <input type="radio" id="star3" name="rating" value="3"><label for="star3" title="3 stars">★</label>
-          <input type="radio" id="star2" name="rating" value="2"><label for="star2" title="2 stars">★</label>
-          <input type="radio" id="star1" name="rating" value="1"><label for="star1" title="1 star">★</label>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-ticket-alt"></i> Seminar Registration</h1>
+            <p class="tagline">Test Mode • ₹1 Payment • Instant Confirmation</p>
         </div>
-      </div>
-    </div>
-    
-    <div class="field full">
-      <label><i class="fas fa-comment"></i> Remarks</label>
-      <textarea id="remarks" rows="2" placeholder="Any special requirements..." autocomplete="off"></textarea>
-    </div>
-    
-    <!-- Payment Card -->
-    <div class="payment-card">
-      <div class="price">
-        <span class="label">Registration Fee (TEST)</span>
-        <span class="amount">₹1</span>
-      </div>
-      
-      <div class="upi-section">
-        <p class="upi-note"><i class="fas fa-info-circle"></i> Pay via any UPI app</p>
-        <div class="upi-apps">
-          <button type="button" class="upi-btn" data-app="phonepe">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/PhonePe_Logo.svg/120px-PhonePe_Logo.svg.png" alt="PhonePe">
-            <span>PhonePe</span>
-          </button>
-          <button type="button" class="upi-btn" data-app="gpay">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/86/Google_Pay_Logo.svg/120px-Google_Pay_Logo.svg.png" alt="GPay">
-            <span>GPay</span>
-          </button>
-          <button type="button" class="upi-btn" data-app="paytm">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Paytm_Logo.svg/120px-Paytm_Logo.svg.png" alt="Paytm">
-            <span>Paytm</span>
-          </button>
-          <button type="button" class="upi-btn" data-app="any">
-            <i class="fas fa-qrcode"></i>
-            <span>Any UPI</span>
-          </button>
+
+        <form id="regForm">
+            <div class="form-row">
+                <div class="field">
+                    <label><i class="fas fa-user"></i> Name <span class="req">*</span></label>
+                    <input type="text" id="name" placeholder="Your Full Name" required autocomplete="name">
+                </div>
+                <div class="field">
+                    <label><i class="fas fa-briefcase"></i> Designation <span class="req">*</span></label>
+                    <input type="text" id="designation" placeholder="e.g., Manager" required autocomplete="organization-title">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="field">
+                    <label><i class="fas fa-building"></i> Company <span class="req">*</span></label>
+                    <input type="text" id="company" placeholder="Your Company" required autocomplete="organization">
+                </div>
+                <div class="field">
+                    <label><i class="fas fa-users"></i> Employees</label>
+                    <select id="employees" autocomplete="off">
+                        <option value="">Select</option>
+                        <option value="1-10">1-10</option>
+                        <option value="11-50">11-50</option>
+                        <option value="51-200">51-200</option>
+                        <option value="200+">200+</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="field">
+                    <label><i class="fas fa-phone"></i> Contact <span class="req">*</span></label>
+                    <input type="tel" id="phone" placeholder="9876543210" pattern="[0-9]{10}" required autocomplete="tel">
+                </div>
+                <div class="field">
+                    <label><i class="fas fa-envelope"></i> Email <span class="req">*</span></label>
+                    <input type="email" id="email" placeholder="you@email.com" required autocomplete="email">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="field">
+                    <label><i class="fas fa-city"></i> City <span class="req">*</span></label>
+                    <input type="text" id="city" placeholder="Your City" required autocomplete="address-level2">
+                </div>
+                <div class="field">
+                    <label><i class="fas fa-star"></i> Rating</label>
+                    <div class="star-rating" id="starRating" role="radiogroup" aria-label="Rating">
+                        <input type="radio" id="star5" name="rating" value="5"><label for="star5" title="5 stars">★</label>
+                        <input type="radio" id="star4" name="rating" value="4"><label for="star4" title="4 stars">★</label>
+                        <input type="radio" id="star3" name="rating" value="3"><label for="star3" title="3 stars">★</label>
+                        <input type="radio" id="star2" name="rating" value="2"><label for="star2" title="2 stars">★</label>
+                        <input type="radio" id="star1" name="rating" value="1"><label for="star1" title="1 star">★</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="field full">
+                <label><i class="fas fa-comment"></i> Remarks</label>
+                <textarea id="remarks" rows="2" placeholder="Any special requirements..." autocomplete="off"></textarea>
+            </div>
+
+            <!-- Payment Card -->
+            <div class="payment-card">
+                <div class="price">
+                    <span class="label">Registration Fee (TEST)</span>
+                    <span class="amount">₹1</span>
+                </div>
+                
+                <div class="upi-section">
+                    <p class="upi-note"><i class="fas fa-info-circle"></i> Pay via any UPI app</p>
+                    <div class="upi-apps">
+                        <button type="button" class="upi-btn" data-app="phonepe">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/PhonePe_Logo.svg/120px-PhonePe_Logo.svg.png" alt="PhonePe">
+                            <span>PhonePe</span>
+                        </button>
+                        <button type="button" class="upi-btn" data-app="gpay">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/86/Google_Pay_Logo.svg/120px-Google_Pay_Logo.svg.png" alt="GPay">
+                            <span>GPay</span>
+                        </button>
+                        <button type="button" class="upi-btn" data-app="paytm">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Paytm_Logo.svg/120px-Paytm_Logo.svg.png" alt="Paytm">
+                            <span>Paytm</span>
+                        </button>
+                        <button type="button" class="upi-btn" data-app="any">
+                            <i class="fas fa-qrcode"></i>
+                            <span>Any UPI</span>
+                        </button>
+                    </div>
+                </div>
+
+                <p id="paymentStatus" class="status">⏳ Payment: <b>Not Done</b></p>
+                <button type="button" id="payBtn" class="btn-primary">
+                    <i class="fas fa-rupee-sign"></i> Pay ₹1 Now
+                </button>
+            </div>
+
+            <button type="submit" id="submitBtn" class="btn-success" disabled>
+                <i class="fas fa-check"></i> Complete Registration
+            </button>
+        </form>
+
+        <!-- Success Screen -->
+        <div id="successMsg" class="success hidden">
+            <div class="success-icon"><i class="fas fa-check-circle"></i></div>
+            <h2>✅ Registration Done!</h2>
+            <p>Thank you, <span id="sName"></span>!</p>
+            <p class="conf">Confirmation sent to: <span id="sEmail"></span></p>
+            <div class="receipt">
+                <p><b>Amount:</b> ₹1 Paid (Test)</p>
+                <p><b>Time:</b> <span id="sTime"></span></p>
+                <p><b>Ref:</b> <span id="sRef"></span></p>
+            </div>
+            <button onclick="window.print()" class="btn-outline"><i class="fas fa-print"></i> Print Receipt</button>
         </div>
-      </div>
-      
-      <p id="paymentStatus" class="status">⏳ Payment: <b>Not Done</b></p>
-      
-      <button type="button" id="payBtn" class="btn-primary">
-        <i class="fas fa-rupee-sign"></i> Pay ₹1 Now
-      </button>
+
+        <!-- Loading Overlay -->
+        <div id="loader" class="loader hidden">
+            <div class="spin"></div>
+            <p>Submitting your registration...</p>
+        </div>
     </div>
-    
-    <button type="submit" id="submitBtn" class="btn-success" disabled>
-      <i class="fas fa-check"></i> Complete Registration
-    </button>
-  </form>
-  
-  <!-- Success Screen -->
-  <div id="successMsg" class="success hidden">
-    <div class="success-icon"><i class="fas fa-check-circle"></i></div>
-    <h2>✅ Registration Done!</h2>
-    <p>Thank you, <span id="sName"></span>!</p>
-    <p class="conf">Confirmation sent to: <span id="sEmail"></span></p>
-    <div class="receipt">
-      <p><b>Amount:</b> ₹1 Paid (Test)</p>
-      <p><b>Time:</b> <span id="sTime"></span></p>
-      <p><b>Ref:</b> <span id="sRef"></span></p>
-    </div>
-    <button onclick="window.print()" class="btn-outline"><i class="fas fa-print"></i> Print Receipt</button>
-  </div>
-  
-  <!-- Loading Overlay -->
-  <div id="loader" class="loader hidden">
-    <div class="spin"></div>
-    <p>Submitting your registration...</p>
-  </div>
-</div>
 
-<footer>
-  <p>© 2026 EventPro • Test Mode • Data Saved to Google Sheet</p>
-</footer>
+    <footer>
+        <p>© 2026 EventPro • Test Mode • Data Saved to Google Sheet</p>
+    </footer>
 
-<div id="toast" class="toast hidden"></div>
-
-<script src="js/script.js"></script>
+    <div id="toast" class="toast hidden"></div>
+    <script src="js/script.js"></script>
 </body>
 </html>
