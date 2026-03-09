@@ -1,26 +1,21 @@
 // ===== CONFIGURATION =====
 const CONFIG = {
-    // Razorpay Payment Link (No key exposure needed!)
     PAYMENT_LINK: "https://rzp.io/rzp/IRE79PZ",
-    
-    // Razorpay Key ID for optional checkout verification (safe to expose)
     RAZORPAY_KEY_ID: "rzp_live_SP580L4d4AeEgL",
-    
     AMOUNT: 100, // ₹1.00 = 100 paise
     CURRENCY: "INR",
-    
-    // Google Apps Script URL (Remove trailing spaces)
     GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbwLzF0hUTdqqZ8pJKKrxofb-C1F3J4iZvnjrPCdAjM94tLbQDIf40lLpxopE9ZImfRe/exec"
 };
 
 // ===== STATE =====
-let paymentDone = false;
+let paymentDone = false; // Always start as false
 let paymentData = {
     razorpay_payment_id: "",
     razorpay_order_id: "",
     razorpay_signature: "",
     payment_link_id: "IRE79PZ"
 };
+let paymentVerified = false; // Additional verification flag
 
 // ===== DOM SHORTCUTS =====
 const $ = id => document.getElementById(id);
@@ -37,33 +32,68 @@ const loaderText = $('loaderText');
 
 // ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
+    // CRITICAL: Reset everything on page load - force new payment
+    resetPaymentState();
+    
     initStarRating();
     initEventListeners();
     setReceiptTime();
-    checkPaymentReturn(); // Check if user returned after payment
+    checkPaymentReturn(); // Only check if returning from payment gateway
 });
+
+// ===== CRITICAL: RESET PAYMENT STATE =====
+function resetPaymentState() {
+    // Always start fresh - NO payment done
+    paymentDone = false;
+    paymentVerified = false;
+    paymentData = {
+        razorpay_payment_id: "",
+        razorpay_order_id: "",
+        razorpay_signature: "",
+        payment_link_id: "IRE79PZ"
+    };
+    
+    // Clear any stored data
+    sessionStorage.removeItem('registrationData');
+    sessionStorage.removeItem('paymentCompleted');
+    localStorage.removeItem('paymentCompleted');
+    
+    // Reset UI
+    resetPaymentUI();
+    
+    console.log('✅ Payment state reset - New session requires payment');
+}
 
 // ===== CHECK PAYMENT RETURN FROM RAZORPAY =====
 function checkPaymentReturn() {
     const urlParams = new URLSearchParams(window.location.search);
     const paymentId = urlParams.get('razorpay_payment_id');
     const status = urlParams.get('razorpay_payment_status');
+    const orderId = urlParams.get('razorpay_order_id');
     
     if (paymentId && status === 'captured') {
-        // Payment successful - auto-fill success screen
-        paymentDone = true;
-        paymentData.razorpay_payment_id = paymentId;
-        paymentData.razorpay_order_id = urlParams.get('razorpay_order_id') || 'N/A';
-        
-        updatePaymentUI(true);
-        showToast('✅ Payment Successful! Completing registration...', 'success');
-        
-        // Auto-submit form after short delay
-        setTimeout(() => {
-            if (validateForm()) {
-                handleSubmit(new Event('submit'));
-            }
-        }, 1500);
+        // Verify this is a fresh payment (not reused)
+        if (paymentId !== paymentData.razorpay_payment_id || !paymentVerified) {
+            paymentDone = true;
+            paymentVerified = true;
+            paymentData.razorpay_payment_id = paymentId;
+            paymentData.razorpay_order_id = orderId || 'N/A';
+            
+            updatePaymentUI(true);
+            showToast('✅ Payment Successful! Completing registration...', 'success');
+            
+            // Clean URL - remove payment params to prevent reuse
+            window.history.replaceState({}, document.title, window.location.pathname);
+            
+            // Auto-submit form after short delay
+            setTimeout(() => {
+                if (validateForm()) {
+                    // Don't auto-submit, let user click
+                    submitBtn.disabled = false;
+                    submitBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 1500);
+        }
     }
 }
 
@@ -86,6 +116,14 @@ function initEventListeners() {
     payBtn?.addEventListener('click', initiatePayment);
     form?.addEventListener('submit', handleSubmit);
     
+    // Prevent back button from bypassing payment
+    window.addEventListener('popstate', function(event) {
+        if (paymentDone && !paymentVerified) {
+            // If they try to go back before completing, reset
+            resetPaymentState();
+        }
+    });
+    
     // Real-time validation
     ['name', 'email', 'phone'].forEach(id => {
         const field = $(id);
@@ -100,10 +138,16 @@ function initEventListeners() {
     });
 }
 
-// ===== PAYMENT FLOW - PAYMENT LINK METHOD =====
+// ===== PAYMENT FLOW =====
 async function initiatePayment() {
     if (!validateForm()) {
         showToast('Please fill all required fields correctly', 'error');
+        return;
+    }
+    
+    // Prevent multiple payment attempts
+    if (paymentDone && paymentVerified) {
+        showToast('⚠️ Payment already completed for this session', 'warning');
         return;
     }
     
@@ -113,21 +157,23 @@ async function initiatePayment() {
     loader?.classList.remove('hidden');
     
     try {
-        // Collect form data for passing to payment link
+        // Collect form data
         const formData = collectFormData();
         
-        // Save data to sessionStorage for retrieval after payment
+        // Save to sessionStorage TEMPORARILY (cleared after payment)
         sessionStorage.setItem('registrationData', JSON.stringify(formData));
         
-        // Build return URL to capture payment status
+        // Build return URL
         const returnUrl = `${window.location.origin}${window.location.pathname}?razorpay_payment_id={payment_id}&razorpay_payment_status={payment_status}&razorpay_order_id={order_id}`;
         
-        // Redirect to Razorpay Payment Link
-        // Razorpay will auto-append payment details to return URL
-        const paymentUrl = `${CONFIG.PAYMENT_LINK}?amount=100&currency=INR&name=${encodeURIComponent(formData.name)}&email=${encodeURIComponent(formData.email)}&contact=${encodeURIComponent(formData.phone)}&return_url=${encodeURIComponent(returnUrl)}`;
+        // Add timestamp to prevent replay
+        const timestamp = Date.now();
+        sessionStorage.setItem('paymentInitiated', timestamp.toString());
         
-        // Redirect user to payment
-        window.location.href = CONFIG.PAYMENT_LINK;
+        // Redirect to Razorpay Payment Link
+        setTimeout(() => {
+            window.location.href = CONFIG.PAYMENT_LINK;
+        }, 500);
         
     } catch (error) {
         console.error('Payment initiation error:', error);
@@ -136,76 +182,6 @@ async function initiatePayment() {
     } finally {
         setLoading(payBtn, false);
         loader?.classList.add('hidden');
-    }
-}
-
-// ===== ALTERNATIVE: Razorpay Checkout SDK Method =====
-// Use this if you have backend to create orders
-async function startRazorpayCheckout() {
-    if (!validateForm()) {
-        showToast('Please fill all required fields correctly', 'error');
-        return;
-    }
-    
-    setLoading(payBtn, true, 'Initializing Payment...');
-    
-    try {
-        // ⚠️ In production, fetch order_id from YOUR backend
-        // Never create orders from frontend with key_secret
-        const options = {
-            key: CONFIG.RAZORPAY_KEY_ID,
-            amount: CONFIG.AMOUNT,
-            currency: CONFIG.CURRENCY,
-            name: "EventPro Seminar",
-            description: "Event Registration - ₹1",
-            image: "https://via.placeholder.com/150x150/667eea/ffffff?text=EP",
-            // order_id: "", // Fetch from backend in production
-            handler: function(response) {
-                paymentDone = true;
-                paymentData = {
-                    razorpay_payment_id: response.razorpay_payment_id,
-                    razorpay_order_id: response.razorpay_order_id || 'ORDER_' + Date.now(),
-                    razorpay_signature: response.razorpay_signature
-                };
-                
-                updatePaymentUI(true);
-                showToast('✅ Payment Successful! Complete your registration.', 'success');
-                submitBtn?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            },
-            prefill: {
-                name: $('name')?.value.trim() || '',
-                email: $('email')?.value.trim() || '',
-                contact: $('phone')?.value.trim() || ''
-            },
-            notes: {
-                registration: "true",
-                company: $('company')?.value.trim() || ''
-            },
-            theme: { color: "#667eea" },
-            modal: {
-                ondismiss: function() {
-                    showToast('Payment cancelled. Try again when ready.', 'warning');
-                    resetPaymentUI();
-                }
-            }
-        };
-        
-        const razorpay = new Razorpay(options);
-        
-        razorpay.on('payment.failed', function(response) {
-            console.error('Payment failed:', response.error);
-            showToast(`❌ Payment Failed: ${response.error.description || 'Please try again'}`, 'error');
-            resetPaymentUI();
-        });
-        
-        razorpay.open();
-        
-    } catch (error) {
-        console.error('Razorpay error:', error);
-        showToast('⚠️ Payment system error. Please try again.', 'error');
-        resetPaymentUI();
-    } finally {
-        setLoading(payBtn, false);
     }
 }
 
@@ -298,9 +274,18 @@ function markInvalid(field, message = '') {
 async function handleSubmit(e) {
     if (e) e.preventDefault();
     
-    if (!paymentDone) {
-        showToast('⚠️ Please complete payment first', 'warning');
+    // CRITICAL: Double-check payment status
+    if (!paymentDone || !paymentVerified) {
+        showToast('⚠️ Payment required! Please complete payment first.', 'error');
         payBtn?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        resetPaymentState(); // Force reset
+        return;
+    }
+    
+    // Verify payment ID exists
+    if (!paymentData.razorpay_payment_id) {
+        showToast('⚠️ Payment verification failed. Please pay again.', 'error');
+        resetPaymentState();
         return;
     }
     
@@ -311,9 +296,12 @@ async function handleSubmit(e) {
         const data = collectFormData();
         await submitToGoogleSheets(data);
         showSuccess(data);
+        
+        // Mark as submitted to prevent duplicate submissions
+        paymentVerified = false; // Prevent reuse
+        
     } catch (error) {
         console.error('Submission error:', error);
-        // Still show success for better UX
         showSuccess(collectFormData());
         showToast('⚠️ Saved locally. Confirmation may be delayed.', 'warning');
     } finally {
@@ -346,7 +334,6 @@ function collectFormData() {
 }
 
 async function submitToGoogleSheets(data) {
-    // Skip if demo/placeholder URL
     if (!CONFIG.GOOGLE_SCRIPT || CONFIG.GOOGLE_SCRIPT.includes('YOUR_')) {
         console.log('✅ Demo mode - Data ready:', data);
         return true;
@@ -434,12 +421,8 @@ window.addEventListener('unhandledrejection', (e) => {
     showToast('⚠️ Connection issue. Please check internet.', 'warning');
 });
 
-// ===== PWA & PRINT =====
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        // navigator.serviceWorker.register('/sw.js');
-    });
+// Prevent page cache
+if (window.performance && window.performance.navigation.type === window.performance.navigation.TYPE_BACK_FORWARD) {
+    console.log('User navigated via back/forward - resetting payment state');
+    resetPaymentState();
 }
-
-window.addEventListener('beforeprint', () => document.body.classList.add('printing'));
-window.addEventListener('afterprint', () => document.body.classList.remove('printing'));
