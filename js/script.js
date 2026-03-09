@@ -1,15 +1,15 @@
 // ===== CONFIGURATION =====
 const CONFIG = {
-    // Razorpay Test Credentials (Replace with your Key ID in production)
-    RAZORPAY_KEY_ID: "rzp_test_YOUR_KEY_ID", // 🔴 Replace with your actual test key
-    AMOUNT: 100, // Amount in paise (₹1.00 = 100 paise)
-    CURRENCY: "INR",
-    NAME: "Seminar Registration",
-    DESCRIPTION: "Test Payment - Event Registration",
-    PREFILL_EMAIL: "", // Will be auto-filled from form
-    PREFILL_CONTACT: "", // Will be auto-filled from form
+    // Razorpay Payment Link (No key exposure needed!)
+    PAYMENT_LINK: "https://rzp.io/rzp/IRE79PZ",
     
-    // Google Apps Script URL (Ensure no trailing spaces)
+    // Razorpay Key ID for optional checkout verification (safe to expose)
+    RAZORPAY_KEY_ID: "rzp_live_SP580L4d4AeEgL",
+    
+    AMOUNT: 100, // ₹1.00 = 100 paise
+    CURRENCY: "INR",
+    
+    // Google Apps Script URL (Remove trailing spaces)
     GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbwLzF0hUTdqqZ8pJKKrxofb-C1F3J4iZvnjrPCdAjM94tLbQDIf40lLpxopE9ZImfRe/exec"
 };
 
@@ -18,7 +18,8 @@ let paymentDone = false;
 let paymentData = {
     razorpay_payment_id: "",
     razorpay_order_id: "",
-    razorpay_signature: ""
+    razorpay_signature: "",
+    payment_link_id: "IRE79PZ"
 };
 
 // ===== DOM SHORTCUTS =====
@@ -32,18 +33,39 @@ const paymentStatus = $('paymentStatus');
 const successMsg = $('successMsg');
 const loader = $('loader');
 const toast = $('toast');
+const loaderText = $('loaderText');
 
 // ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
     initStarRating();
     initEventListeners();
     setReceiptTime();
-    
-    // Auto-fill Razorpay prefill from form when fields change
-    ['email', 'phone'].forEach(id => {
-        $(id)?.addEventListener('blur', updateRazorpayPrefill);
-    });
+    checkPaymentReturn(); // Check if user returned after payment
 });
+
+// ===== CHECK PAYMENT RETURN FROM RAZORPAY =====
+function checkPaymentReturn() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentId = urlParams.get('razorpay_payment_id');
+    const status = urlParams.get('razorpay_payment_status');
+    
+    if (paymentId && status === 'captured') {
+        // Payment successful - auto-fill success screen
+        paymentDone = true;
+        paymentData.razorpay_payment_id = paymentId;
+        paymentData.razorpay_order_id = urlParams.get('razorpay_order_id') || 'N/A';
+        
+        updatePaymentUI(true);
+        showToast('✅ Payment Successful! Completing registration...', 'success');
+        
+        // Auto-submit form after short delay
+        setTimeout(() => {
+            if (validateForm()) {
+                handleSubmit(new Event('submit'));
+            }
+        }, 1500);
+    }
+}
 
 // ===== STAR RATING =====
 function initStarRating() {
@@ -57,30 +79,14 @@ function initStarRating() {
             star.click();
         }, { passive: true });
     });
-    
-    rating.addEventListener('keydown', (e) => {
-        const checked = rating.querySelector('input:checked');
-        const inputs = $$('input', rating);
-        const idx = checked ? Array.from(inputs).indexOf(checked) : -1;
-        
-        if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
-            e.preventDefault();
-            const next = inputs[Math.min(idx + 1, inputs.length - 1)];
-            if (next) { next.checked = true; next.dispatchEvent(new Event('change')); }
-        }
-        if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
-            e.preventDefault();
-            const prev = inputs[Math.max(idx - 1, 0)];
-            if (prev) { prev.checked = true; prev.dispatchEvent(new Event('change')); }
-        }
-    });
 }
 
 // ===== EVENT LISTENERS =====
 function initEventListeners() {
-    payBtn?.addEventListener('click', startRazorpayPayment);
+    payBtn?.addEventListener('click', initiatePayment);
     form?.addEventListener('submit', handleSubmit);
     
+    // Real-time validation
     ['name', 'email', 'phone'].forEach(id => {
         const field = $(id);
         if (field) {
@@ -94,87 +100,108 @@ function initEventListeners() {
     });
 }
 
-function updateRazorpayPrefill() {
-    CONFIG.PREFILL_EMAIL = $('email')?.value.trim() || '';
-    CONFIG.PREFILL_CONTACT = $('phone')?.value.trim() || '';
-}
-
-// ===== RAZORPAY PAYMENT FLOW =====
-async function startRazorpayPayment() {
+// ===== PAYMENT FLOW - PAYMENT LINK METHOD =====
+async function initiatePayment() {
     if (!validateForm()) {
         showToast('Please fill all required fields correctly', 'error');
         return;
     }
     
-    // Update prefill with latest form values
-    updateRazorpayPrefill();
+    // Show loading
+    setLoading(payBtn, true, 'Redirecting to Payment...');
+    loaderText.textContent = 'Redirecting to secure payment...';
+    loader?.classList.remove('hidden');
     
-    // Show loading state
+    try {
+        // Collect form data for passing to payment link
+        const formData = collectFormData();
+        
+        // Save data to sessionStorage for retrieval after payment
+        sessionStorage.setItem('registrationData', JSON.stringify(formData));
+        
+        // Build return URL to capture payment status
+        const returnUrl = `${window.location.origin}${window.location.pathname}?razorpay_payment_id={payment_id}&razorpay_payment_status={payment_status}&razorpay_order_id={order_id}`;
+        
+        // Redirect to Razorpay Payment Link
+        // Razorpay will auto-append payment details to return URL
+        const paymentUrl = `${CONFIG.PAYMENT_LINK}?amount=100&currency=INR&name=${encodeURIComponent(formData.name)}&email=${encodeURIComponent(formData.email)}&contact=${encodeURIComponent(formData.phone)}&return_url=${encodeURIComponent(returnUrl)}`;
+        
+        // Redirect user to payment
+        window.location.href = CONFIG.PAYMENT_LINK;
+        
+    } catch (error) {
+        console.error('Payment initiation error:', error);
+        showToast('⚠️ Could not start payment. Please try again.', 'error');
+        resetPaymentUI();
+    } finally {
+        setLoading(payBtn, false);
+        loader?.classList.add('hidden');
+    }
+}
+
+// ===== ALTERNATIVE: Razorpay Checkout SDK Method =====
+// Use this if you have backend to create orders
+async function startRazorpayCheckout() {
+    if (!validateForm()) {
+        showToast('Please fill all required fields correctly', 'error');
+        return;
+    }
+    
     setLoading(payBtn, true, 'Initializing Payment...');
     
     try {
-        // For test mode, we can directly open checkout without creating order on server
-        // In production, you should create an order via your backend first
+        // ⚠️ In production, fetch order_id from YOUR backend
+        // Never create orders from frontend with key_secret
         const options = {
             key: CONFIG.RAZORPAY_KEY_ID,
             amount: CONFIG.AMOUNT,
             currency: CONFIG.CURRENCY,
             name: "EventPro Seminar",
-            description: CONFIG.DESCRIPTION,
-            image: "https://via.placeholder.com/150x150/667eea/ffffff?text=EP", // Optional logo
-            order_id: "", // Empty for test mode; use server-generated order_id in production
+            description: "Event Registration - ₹1",
+            image: "https://via.placeholder.com/150x150/667eea/ffffff?text=EP",
+            // order_id: "", // Fetch from backend in production
             handler: function(response) {
-                // Payment successful
                 paymentDone = true;
                 paymentData = {
                     razorpay_payment_id: response.razorpay_payment_id,
-                    razorpay_order_id: response.razorpay_order_id || 'TEST_ORDER',
-                    razorpay_signature: response.razorpay_signature || 'TEST_SIG'
+                    razorpay_order_id: response.razorpay_order_id || 'ORDER_' + Date.now(),
+                    razorpay_signature: response.razorpay_signature
                 };
                 
-                // Update UI
                 updatePaymentUI(true);
                 showToast('✅ Payment Successful! Complete your registration.', 'success');
-                
-                // Auto-scroll to submit button
                 submitBtn?.scrollIntoView({ behavior: 'smooth', block: 'center' });
             },
             prefill: {
                 name: $('name')?.value.trim() || '',
-                email: CONFIG.PREFILL_EMAIL,
-                contact: CONFIG.PREFILL_CONTACT
+                email: $('email')?.value.trim() || '',
+                contact: $('phone')?.value.trim() || ''
             },
             notes: {
                 registration: "true",
-                user_agent: navigator.userAgent
+                company: $('company')?.value.trim() || ''
             },
-            theme: {
-                color: "#667eea"
-            },
+            theme: { color: "#667eea" },
             modal: {
                 ondismiss: function() {
-                    // User closed the modal without paying
                     showToast('Payment cancelled. Try again when ready.', 'warning');
                     resetPaymentUI();
                 }
             }
         };
         
-        // Initialize Razorpay
         const razorpay = new Razorpay(options);
         
-        // Handle payment failure
         razorpay.on('payment.failed', function(response) {
             console.error('Payment failed:', response.error);
             showToast(`❌ Payment Failed: ${response.error.description || 'Please try again'}`, 'error');
             resetPaymentUI();
         });
         
-        // Open Razorpay Checkout
         razorpay.open();
         
     } catch (error) {
-        console.error('Razorpay initialization error:', error);
+        console.error('Razorpay error:', error);
         showToast('⚠️ Payment system error. Please try again.', 'error');
         resetPaymentUI();
     } finally {
@@ -182,6 +209,7 @@ async function startRazorpayPayment() {
     }
 }
 
+// ===== UI UPDATES =====
 function updatePaymentUI(paid) {
     if (!paymentStatus || !payBtn || !submitBtn) return;
     
@@ -199,10 +227,10 @@ function updatePaymentUI(paid) {
 function resetPaymentUI() {
     if (!paymentStatus || !payBtn || !submitBtn) return;
     
-    paymentStatus.innerHTML = '⏳ Payment: <b>Not Done</b>';
+    paymentStatus.innerHTML = '⏳ Payment: <b>Pending</b>';
     paymentStatus.classList.remove('paid');
     submitBtn.disabled = true;
-    payBtn.innerHTML = '<i class="fas fa-rupee-sign"></i> Pay ₹1 with Razorpay';
+    payBtn.innerHTML = '<i class="fas fa-rupee-sign"></i> Pay ₹1 Securely';
     payBtn.style.background = '';
     payBtn.style.cursor = 'pointer';
     payBtn.disabled = false;
@@ -268,7 +296,7 @@ function markInvalid(field, message = '') {
 
 // ===== FORM SUBMISSION =====
 async function handleSubmit(e) {
-    e.preventDefault();
+    if (e) e.preventDefault();
     
     if (!paymentDone) {
         showToast('⚠️ Please complete payment first', 'warning');
@@ -277,6 +305,7 @@ async function handleSubmit(e) {
     }
     
     loader?.classList.remove('hidden');
+    loaderText.textContent = 'Saving your registration...';
     
     try {
         const data = collectFormData();
@@ -284,7 +313,7 @@ async function handleSubmit(e) {
         showSuccess(data);
     } catch (error) {
         console.error('Submission error:', error);
-        // Still show success even if Google Sheets fails (offline support)
+        // Still show success for better UX
         showSuccess(collectFormData());
         showToast('⚠️ Saved locally. Confirmation may be delayed.', 'warning');
     } finally {
@@ -304,36 +333,36 @@ function collectFormData() {
         city: $('city')?.value.trim() || '',
         rating: rating,
         remarks: $('remarks')?.value.trim() || 'None',
-        payment_status: 'Paid',
+        payment_status: paymentDone ? 'Paid' : 'Pending',
         amount: `₹${(CONFIG.AMOUNT / 100).toFixed(2)}`,
         payment_method: 'Razorpay',
-        razorpay_payment_id: paymentData.razorpay_payment_id || 'TEST_PAYMENT',
-        razorpay_order_id: paymentData.razorpay_order_id || 'TEST_ORDER',
+        razorpay_payment_id: paymentData.razorpay_payment_id || 'PENDING',
+        razorpay_order_id: paymentData.razorpay_order_id || 'N/A',
+        payment_link_id: paymentData.payment_link_id || 'IRE79PZ',
         timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent
+        userAgent: navigator.userAgent,
+        page_url: window.location.href
     };
 }
 
 async function submitToGoogleSheets(data) {
-    if (!CONFIG.GOOGLE_SCRIPT || CONFIG.GOOGLE_SCRIPT.includes('YOUR_') || CONFIG.GOOGLE_SCRIPT.includes('script.google.com/macros/s/AKfycbw')) {
-        console.log('✅ Demo mode - Data ready for Google Sheets:', data);
+    // Skip if demo/placeholder URL
+    if (!CONFIG.GOOGLE_SCRIPT || CONFIG.GOOGLE_SCRIPT.includes('YOUR_')) {
+        console.log('✅ Demo mode - Data ready:', data);
         return true;
     }
     
     try {
         const response = await fetch(CONFIG.GOOGLE_SCRIPT, {
             method: 'POST',
-            mode: 'no-cors', // Required for Google Apps Script
-            headers: { 
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-        console.log('Google Sheets response status:', response.status);
+        console.log('Google Sheets response:', response.status);
         return true;
     } catch (err) {
-        console.error('Google Sheets submission error:', err);
+        console.error('Google Sheets error:', err);
         throw err;
     }
 }
@@ -343,20 +372,15 @@ function showSuccess(data) {
     form?.classList.add('hidden');
     successMsg?.classList.remove('hidden');
     
-    const sName = $('sName');
-    const sEmail = $('sEmail');
-    const sRef = $('sRef');
-    const sTime = $('sTime');
-    const sPaymentId = $('sPaymentId');
-    
-    if (sName) sName.textContent = data.name;
-    if (sEmail) sEmail.textContent = data.email;
-    if (sRef) sRef.textContent = paymentData.razorpay_order_id || 'N/A';
-    if (sPaymentId) sPaymentId.textContent = paymentData.razorpay_payment_id || 'TEST_PAYMENT_ID';
-    if (sTime) sTime.textContent = new Date().toLocaleString('en-IN', {
+    $('sName') && ($('sName').textContent = data.name);
+    $('sEmail') && ($('sEmail').textContent = data.email);
+    $('sAmount') && ($('sAmount').textContent = data.amount);
+    $('sPaymentId') && ($('sPaymentId').textContent = paymentData.razorpay_payment_id || 'Processing...');
+    $('sStatus') && ($('sStatus').textContent = data.payment_status);
+    $('sTime') && ($('sTime').textContent = new Date().toLocaleString('en-IN', {
         weekday: 'short', day: 'numeric', month: 'short',
         hour: '2-digit', minute: '2-digit'
-    });
+    }));
     
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (navigator.vibrate) navigator.vibrate([50, 100, 50]);
@@ -393,28 +417,10 @@ function showToast(message, type = 'info') {
     toast.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i> ${message}`;
     toast.classList.remove('hidden');
     
-    // Clear existing timeout if any
     if (toast.timeoutId) clearTimeout(toast.timeoutId);
     toast.timeoutId = setTimeout(() => {
         toast.classList.add('hidden');
     }, 3200);
-}
-
-// ===== PRINT & PWA =====
-window.addEventListener('beforeprint', () => document.body.classList.add('printing'));
-window.addEventListener('afterprint', () => document.body.classList.remove('printing'));
-
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    // You can show an install button here if needed
-});
-
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        // navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed:', err));
-    });
 }
 
 // ===== ERROR HANDLING =====
@@ -424,6 +430,16 @@ window.addEventListener('error', (e) => {
 });
 
 window.addEventListener('unhandledrejection', (e) => {
-    console.error('Unhandled promise rejection:', e.reason);
-    showToast('⚠️ Connection issue. Please check your internet.', 'warning');
+    console.error('Unhandled promise:', e.reason);
+    showToast('⚠️ Connection issue. Please check internet.', 'warning');
 });
+
+// ===== PWA & PRINT =====
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        // navigator.serviceWorker.register('/sw.js');
+    });
+}
+
+window.addEventListener('beforeprint', () => document.body.classList.add('printing'));
+window.addEventListener('afterprint', () => document.body.classList.remove('printing'));

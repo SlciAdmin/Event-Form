@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-    <title>Event Registration | Test ₹1</title>
+    <title>Event Registration | ₹1 Payment</title>
     <link rel="stylesheet" href="css/style.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-    <!-- Razorpay SDK -->
+    <!-- Razorpay SDK for payment status verification -->
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1><i class="fas fa-ticket-alt"></i> Seminar Registration</h1>
-            <p class="tagline">Test Mode • ₹1 Payment • Instant Confirmation</p>
+            <p class="tagline">Secure Payment • ₹1 • Instant Confirmation</p>
         </div>
 
         <form id="regForm">
@@ -78,10 +78,10 @@
                 <textarea id="remarks" rows="2" placeholder="Any special requirements..." autocomplete="off"></textarea>
             </div>
 
-            <!-- Payment Card - Razorpay -->
+            <!-- Payment Card -->
             <div class="payment-card">
                 <div class="price">
-                    <span class="label">Registration Fee (TEST)</span>
+                    <span class="label">Registration Fee</span>
                     <span class="amount">₹1</span>
                 </div>
                 
@@ -95,10 +95,11 @@
                     </p>
                 </div>
 
-                <p id="paymentStatus" class="status">⏳ Payment: <b>Not Done</b></p>
+                <p id="paymentStatus" class="status">⏳ Payment: <b>Pending</b></p>
                 <button type="button" id="payBtn" class="btn-primary">
-                    <i class="fas fa-rupee-sign"></i> Pay ₹1 with Razorpay
+                    <i class="fas fa-rupee-sign"></i> Pay ₹1 Securely
                 </button>
+                <p class="payment-hint"><small>🔒 You'll be redirected to Razorpay for payment</small></p>
             </div>
 
             <button type="submit" id="submitBtn" class="btn-success" disabled>
@@ -109,27 +110,30 @@
         <!-- Success Screen -->
         <div id="successMsg" class="success hidden">
             <div class="success-icon"><i class="fas fa-check-circle"></i></div>
-            <h2>✅ Registration Done!</h2>
+            <h2>✅ Registration Successful!</h2>
             <p>Thank you, <span id="sName"></span>!</p>
             <p class="conf">Confirmation sent to: <span id="sEmail"></span></p>
             <div class="receipt">
-                <p><b>Amount:</b> ₹1 Paid (Test)</p>
+                <p><b>Amount:</b> <span id="sAmount"></span></p>
                 <p><b>Time:</b> <span id="sTime"></span></p>
-                <p><b>Ref:</b> <span id="sRef"></span></p>
                 <p><b>Payment ID:</b> <span id="sPaymentId"></span></p>
+                <p><b>Status:</b> <span id="sStatus" style="color:var(--success)">Paid</span></p>
             </div>
             <button onclick="window.print()" class="btn-outline"><i class="fas fa-print"></i> Print Receipt</button>
+            <button onclick="location.reload()" class="btn-primary" style="margin-top:10px">
+                <i class="fas fa-redo"></i> New Registration
+            </button>
         </div>
 
         <!-- Loading Overlay -->
         <div id="loader" class="loader hidden">
             <div class="spin"></div>
-            <p>Processing your registration...</p>
+            <p id="loaderText">Processing...</p>
         </div>
     </div>
 
     <footer>
-        <p>© 2026 EventPro • Test Mode • Razorpay Secured • Data Saved to Google Sheet</p>
+        <p>© 2026 EventPro • Razorpay Secured • Data Saved to Google Sheet</p>
     </footer>
 
     <div id="toast" class="toast hidden"></div>
