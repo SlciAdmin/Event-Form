@@ -1,9 +1,11 @@
-// ===== CONFIGURATION =====
 const CONFIG = {
-    PAYMENT_LINK: "https://rzp.io/rzp/IRE79PZ",
-    RAZORPAY_KEY_ID: "rzp_live_SP580L4d4AeEgL",
-    AMOUNT: 100,
+    // Aapka Razorpay.me link (full URL)
+    PAYMENT_LINK: "https://razorpay.me/@shaktilegalcomplianceinterjur",
+    
+    AMOUNT: 100, // ₹1.00 = 100 paise
     CURRENCY: "INR",
+    
+    // Google Apps Script URL
     GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbwLzF0hUTdqqZ8pJKKrxofb-C1F3J4iZvnjrPCdAjM94tLbQDIf40lLpxopE9ZImfRe/exec"
 };
 
