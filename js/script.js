@@ -1,14 +1,12 @@
 const CONFIG = {
-    // ✅ FIXED: Removed trailing spaces from URLs
+    // ✅ NO TRAILING SPACES - CRITICAL FIX
     PAYMENT_LINK: "https://rzp.io/rzp/5NCrTAI",
     
-    AMOUNT: 100, // ₹1.00 = 100 paise
+    AMOUNT: 100,
     CURRENCY: "INR",
     
-    // ✅ FIXED: Removed trailing spaces
     GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbwLzF0hUTdqqZ8pJKKrxofb-C1F3J4iZvnjrPCdAjM94tLbQDIf40lLpxopE9ZImfRe/exec",
     
-    // ✅ ADD: Your page URL for payment return (IMPORTANT for Payment Links)
     RETURN_URL: window.location.href.split('?')[0]
 };
 
@@ -25,90 +23,109 @@ let paymentData = {
 const $ = id => document.getElementById(id);
 const $$ = (sel, ctx = document) => ctx.querySelectorAll(sel);
 
-// ===== CRITICAL: Handle Payment Return FIRST before any reset =====
+// ===== DEBUG HELPER =====
+function debug(msg, data = null) {
+    console.log(`[💳 DEBUG] ${msg}`, data || '');
+}
+
+// ===== HANDLE PAYMENT RETURN (After Razorpay Redirect) =====
 function handlePaymentReturn() {
+    debug('Checking payment return params...');
+    
     const urlParams = new URLSearchParams(window.location.search);
     const paymentId = urlParams.get('razorpay_payment_id');
     const status = urlParams.get('razorpay_payment_status');
     const orderId = urlParams.get('razorpay_order_id');
     const error = urlParams.get('razorpay_error');
     
-    // ✅ If payment successful
+    // ✅ Payment Successful
     if (paymentId && status === 'captured') {
+        debug('✅ Payment captured!', { paymentId, orderId });
+        
         paymentDone = true;
         paymentData.razorpay_payment_id = paymentId;
         paymentData.razorpay_order_id = orderId || 'N/A';
         
-        // Save to sessionStorage for form submission
+        // Save to sessionStorage
         sessionStorage.setItem('paymentData', JSON.stringify(paymentData));
         
-        // Clean URL without reload
-        window.history.replaceState({}, document.title, CONFIG.RETURN_URL);
+        // Clean URL
+        if (window.history.replaceState) {
+            window.history.replaceState({}, document.title, CONFIG.RETURN_URL);
+        }
+        
+        // Update UI
+        updatePaymentUI(true);
+        $('submitBtn') && ($('submitBtn').disabled = false);
         
         return true;
     }
     
-    // ✅ If payment failed/cancelled
+    // ✅ Payment Failed/Cancelled
     if (error || (status && status !== 'captured')) {
+        debug('❌ Payment failed/cancelled', { error, status });
         showToast(`⚠️ Payment ${error ? 'Failed' : 'Cancelled'}. Try again.`, 'warning');
         resetPaymentUI();
-        window.history.replaceState({}, document.title, CONFIG.RETURN_URL);
+        
+        if (window.history.replaceState) {
+            window.history.replaceState({}, document.title, CONFIG.RETURN_URL);
+        }
         return false;
     }
     
+    debug('ℹ️ No payment params in URL');
     return false;
 }
 
 // ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
-    // ✅ STEP 1: Check payment return FIRST (before reset)
+    debug('🚀 DOM Loaded');
+    
+    // STEP 1: Check payment return FIRST
     const paymentReceived = handlePaymentReturn();
     
-    // ✅ STEP 2: Only reset if NO payment data in URL AND no saved session
+    // STEP 2: Restore from session if exists
     const savedPayment = sessionStorage.getItem('paymentData');
-    if (!paymentReceived && !savedPayment) {
-        forceResetForNewUser();
-    } else if (savedPayment) {
-        // Restore payment state from session
+    if (savedPayment && !paymentReceived) {
+        debug('🔄 Restoring from session');
         paymentData = JSON.parse(savedPayment);
-        paymentDone = true;
-        updatePaymentUI(true);
-        const submitBtn = $('submitBtn');
-        if (submitBtn) submitBtn.disabled = false;
+        if (paymentData.razorpay_payment_id) {
+            paymentDone = true;
+            updatePaymentUI(true);
+            $('submitBtn') && ($('submitBtn').disabled = false);
+        }
+    } else if (!paymentReceived && !savedPayment) {
+        debug('🆕 Fresh session');
+        forceResetForNewUser();
     }
     
+    // Initialize UI
     initStarRating();
     initEventListeners();
     setReceiptTime();
     
-    // Prevent page cache issues
+    // Handle page cache
     window.addEventListener('pageshow', (event) => {
-        if (event.persisted) {
-            // Only reload if no payment in progress
-            if (!paymentDone && !sessionStorage.getItem('paymentData')) {
-                window.location.reload();
-            }
+        if (event.persisted && !paymentDone && !sessionStorage.getItem('paymentData')) {
+            debug('♻️ Page restored from cache - reloading');
+            window.location.reload();
         }
     });
 });
 
-// ===== RESET FOR NEW USER (Safe Version) =====
+// ===== RESET FOR NEW USER =====
 function forceResetForNewUser() {
-    console.log('🔄 Fresh session started');
+    debug('🔄 Resetting for new user');
     
-    // Clear ONLY form-related storage, keep payment if exists
-    const paymentDataTemp = sessionStorage.getItem('paymentData');
+    // Clear storage but preserve payment if exists
+    const paymentTemp = sessionStorage.getItem('paymentData');
     
     sessionStorage.clear();
     localStorage.clear();
     
-    // Restore payment data if it existed
-    if (paymentDataTemp) {
-        sessionStorage.setItem('paymentData', paymentDataTemp);
-    }
-    
-    // Reset state only if no payment
-    if (!paymentDataTemp) {
+    if (paymentTemp) {
+        sessionStorage.setItem('paymentData', paymentTemp);
+    } else {
         paymentDone = false;
         paymentData = {
             razorpay_payment_id: "",
@@ -120,7 +137,7 @@ function forceResetForNewUser() {
     
     clearFormFields();
     
-    if (!paymentDataTemp) {
+    if (!paymentTemp) {
         resetPaymentUI();
         hideSuccessScreen();
         showForm();
@@ -128,16 +145,18 @@ function forceResetForNewUser() {
     
     // Clean URL
     if (window.location.search && !window.location.search.includes('razorpay_')) {
-        window.history.replaceState({}, document.title, CONFIG.RETURN_URL);
+        if (window.history.replaceState) {
+            window.history.replaceState({}, document.title, CONFIG.RETURN_URL);
+        }
     }
     
     const submitBtn = $('submitBtn');
-    if (submitBtn && !paymentDone) submitBtn.disabled = true;
+    if (submitBtn) submitBtn.disabled = !paymentDone;
     
-    console.log('✅ State initialized');
+    debug('✅ Reset complete');
 }
 
-// ===== CLEAR FORM FIELDS =====
+// ===== CLEAR FORM =====
 function clearFormFields() {
     const form = $('regForm');
     if (!form) return;
@@ -171,9 +190,32 @@ function initEventListeners() {
     const payBtn = $('payBtn');
     const form = $('regForm');
     
+    // ✅ Pay Button Click - Validation BEFORE redirect
     if (payBtn) {
-        payBtn.addEventListener('click', initiatePayment);
+        payBtn.addEventListener('click', function(e) {
+            debug('💳 Pay button clicked');
+            
+            // Validate form first
+            if (!validateForm()) {
+                e.preventDefault(); // Stop redirect if validation fails
+                debug('❌ Validation failed');
+                showToast('Please fill all required fields', 'error');
+                return false;
+            }
+            
+            debug('✅ Validation passed - saving form data');
+            
+            // Save form data before redirect
+            const formData = collectFormData();
+            sessionStorage.setItem('tempFormData', JSON.stringify(formData));
+            
+            // Allow default anchor redirect to Razorpay
+            debug('🔗 Redirecting to Razorpay...');
+            return true;
+        });
     }
+    
+    // Form Submit
     if (form) {
         form.addEventListener('submit', handleSubmit);
     }
@@ -192,43 +234,6 @@ function initEventListeners() {
     });
 }
 
-// ===== PAYMENT INITIATION - FIXED =====
-async function initiatePayment() {
-    if (!validateForm()) {
-        showToast('Please fill all required fields', 'error');
-        return;
-    }
-    
-    if (paymentDone) {
-        showToast('⚠️ Payment already completed', 'warning');
-        return;
-    }
-    
-    const payBtn = $('payBtn');
-    setLoading(payBtn, true, 'Redirecting...');
-    
-    try {
-        // ✅ Save form data before redirect
-        const formData = collectFormData();
-        sessionStorage.setItem('tempFormData', JSON.stringify(formData));
-        
-        // ✅ FIXED: Open Payment Link in SAME tab with proper return URL handling
-        // Razorpay Payment Links automatically redirect back to configured URL
-        // Make sure your Razorpay dashboard has RETURN_URL set as "Redirect URL"
-        
-        setTimeout(() => {
-            // ✅ CRITICAL: Use replace to avoid back-button issues
-            window.location.replace(CONFIG.PAYMENT_LINK.trim());
-        }, 500);
-        
-    } catch (error) {
-        console.error('Payment initiation error:', error);
-        showToast('⚠️ Could not start payment. Try again.', 'error');
-        resetPaymentUI();
-        setLoading(payBtn, false);
-    }
-}
-
 // ===== UI UPDATES =====
 function updatePaymentUI(paid) {
     const paymentStatus = $('paymentStatus');
@@ -243,9 +248,11 @@ function updatePaymentUI(paid) {
         
         payBtn.innerHTML = '<i class="fas fa-check"></i> Payment Successful';
         payBtn.style.background = 'linear-gradient(135deg, var(--success), var(--success-dark))';
-        payBtn.disabled = true;
+        payBtn.style.pointerEvents = 'none';
+        payBtn.setAttribute('aria-disabled', 'true');
         
         if (submitBtn) submitBtn.disabled = false;
+        debug('🎨 UI updated: Paid state');
     }
 }
 
@@ -262,8 +269,11 @@ function resetPaymentUI() {
     payBtn.innerHTML = '<i class="fas fa-rupee-sign"></i> Pay ₹1 Securely';
     payBtn.style.background = '';
     payBtn.disabled = false;
+    payBtn.style.pointerEvents = '';
+    payBtn.removeAttribute('aria-disabled');
     
     if (submitBtn) submitBtn.disabled = true;
+    debug('🎨 UI updated: Pending state');
 }
 
 // ===== VALIDATION =====
@@ -322,7 +332,7 @@ function validateField(field) {
 
 function markInvalid(field) {
     if (!field) return;
-    field.style.borderColor = 'var(--danger)';
+    field.style.borderColor = 'var(--danger, #e74c3c)';
     field.setAttribute('aria-invalid', 'true');
 }
 
@@ -330,13 +340,16 @@ function markInvalid(field) {
 async function handleSubmit(e) {
     if (e) e.preventDefault();
     
+    debug('📤 Form submit triggered');
+    
     if (!paymentDone) {
+        debug('❌ Payment not done');
         showToast('⚠️ Please complete payment first', 'error');
         $('payBtn')?.scrollIntoView({ behavior: 'smooth' });
         return;
     }
     
-    // Get payment data from session if not in memory
+    // Get payment data
     if (!paymentData.razorpay_payment_id) {
         const saved = sessionStorage.getItem('paymentData');
         if (saved) {
@@ -345,6 +358,7 @@ async function handleSubmit(e) {
     }
     
     if (!paymentData.razorpay_payment_id) {
+        debug('❌ No payment ID found');
         showToast('⚠️ Payment verification failed', 'error');
         forceResetForNewUser();
         return;
@@ -355,11 +369,14 @@ async function handleSubmit(e) {
     
     try {
         const data = collectFormData();
+        debug('📦 Submitting data:', data);
+        
         await submitToGoogleSheets(data);
         showSuccess(data);
         
-        // ✅ Reset after 3 seconds for next user
+        // Reset after 3 seconds
         setTimeout(() => {
+            debug('🔄 Auto-resetting for next user');
             forceResetForNewUser();
         }, 3000);
         
@@ -394,18 +411,18 @@ function collectFormData() {
 
 async function submitToGoogleSheets(data) {
     if (!CONFIG.GOOGLE_SCRIPT || CONFIG.GOOGLE_SCRIPT.includes('YOUR_')) {
-        console.log('📋 Demo mode - Data:', data);
+        debug('📋 Demo mode - Google Script not configured');
         return true;
     }
     
     try {
-        // ✅ Use mode: 'no-cors' for Google Apps Script
-        await fetch(CONFIG.GOOGLE_SCRIPT.trim(), {
+        await fetch(CONFIG.GOOGLE_SCRIPT, {
             method: 'POST',
             mode: 'no-cors',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
+        debug('✅ Google Sheets request sent');
         return true;
     } catch (err) {
         console.error('Google Sheets error:', err);
@@ -425,6 +442,7 @@ function showSuccess(data) {
     $('sTime') && ($('sTime').textContent = new Date().toLocaleString('en-IN'));
     
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    debug('🎉 Success screen shown');
 }
 
 function setReceiptTime() {
@@ -466,7 +484,7 @@ function showToast(message, type = 'info') {
     }, 3500);
 }
 
-// ===== STAR RATING (Basic Implementation) =====
+// ===== STAR RATING =====
 function initStarRating() {
     const stars = $$('.star-rating label');
     stars.forEach(label => {
@@ -479,16 +497,15 @@ function initStarRating() {
     });
 }
 
-// ===== PREVENT BACK NAVIGATION ISSUES =====
+// ===== BACK BUTTON HANDLER =====
 window.addEventListener('popstate', () => {
-    // Only reset if not in payment flow
     if (!paymentDone && !window.location.search.includes('razorpay_')) {
+        debug('⬅️ Back button pressed - resetting');
         forceResetForNewUser();
     }
 });
 
-// ===== CLEANUP ON UNLOAD =====
+// ===== CLEANUP =====
 window.addEventListener('beforeunload', () => {
-    // Only clear temp form data, keep payment data
     sessionStorage.removeItem('tempFormData');
 });
