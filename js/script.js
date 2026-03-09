@@ -1,6 +1,6 @@
 const CONFIG = {
     // Aapka Razorpay.me link (full URL)
-    PAYMENT_LINK: "https://razorpay.me/@shaktilegalcomplianceinterjur",
+    PAYMENT_LINK: "https://rzp.io/rzp/5NCrTAI",
     
     AMOUNT: 100, // ₹1.00 = 100 paise
     CURRENCY: "INR",
