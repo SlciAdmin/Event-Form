@@ -109,7 +109,7 @@ async function startPayment() {
   upiAppOpened = false;
   
   // Create UPI Link with proper encoding
-  const upiLink = `upi://pay?pa=${encodeURIComponent(CONFIG.UPI_ID)}&pn=${encodeURIComponent(CONFIG.UPI_NAME)}&am=${CONFIG.AMOUNT}&tn=${encodeURIComponent(CONFIG.NOTE)}&cu=INR`;
+  const upiLink = `upi://pay?pa=${CONFIG.UPI_ID}&pn=${CONFIG.UPI_NAME}&am=${CONFIG.AMOUNT}&cu=INR&tn=${CONFIG.NOTE}`;
   
   // Track if app opened
   const startTime = Date.now();
@@ -126,7 +126,7 @@ async function startPayment() {
   document.addEventListener('visibilitychange', handleVisibilityChange);
   
   // Try to open UPI app with standard link
-  window.location.href = upiLink;
+  window.open(upiLink, "_self");
   
   // App-specific fallback links for better compatibility
   if (selectedUPI === 'gpay') {
