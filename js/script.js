@@ -5,7 +5,7 @@ const CONFIG = {
     AMOUNT: 100,
     CURRENCY: "INR",
     
-    GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbwLzF0hUTdqqZ8pJKKrxofb-C1F3J4iZvnjrPCdAjM94tLbQDIf40lLpxopE9ZImfRe/exec",
+    GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbxR8886dsk6fB3xCKKWFjJSy5y5pJjHN6TLaynY06URgzuJyTO4QFOPhSB3bAwBjciw/exec",
     
     RETURN_URL: window.location.href.split('?')[0]
 };
