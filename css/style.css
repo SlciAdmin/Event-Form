@@ -16,6 +16,7 @@
     --radius: 16px;
     --radius-sm: 10px;
     --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --razorpay-blue: #3395ff;
 }
 
 /* ===== BASE RESET ===== */
@@ -245,61 +246,45 @@ select {
     text-shadow: 0 2px 4px rgba(39, 174, 96, 0.2);
 }
 
-.upi-note {
+.payment-note {
     font-size: 0.85rem;
     color: var(--gray);
-    margin: 8px 0 12px;
+    margin: 8px 0 8px;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
 }
 
-/* UPI App Buttons */
-.upi-apps {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
-    margin: 12px 0;
+.payment-methods {
+    font-size: 0.8rem;
+    color: var(--gray);
+    margin: 0 0 12px;
+    line-height: 1.4;
 }
 
-.upi-btn {
-    background: white;
-    border: 2px solid var(--border);
-    border-radius: 12px;
-    padding: 10px 6px;
-    display: flex;
-    flex-direction: column;
+.payment-methods i {
+    color: var(--primary);
+    margin: 0 3px;
+}
+
+/* Razorpay Badge */
+.razorpay-badge {
+    display: inline-flex;
     align-items: center;
     gap: 6px;
-    cursor: pointer;
-    transition: var(--transition);
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--dark);
+    background: linear-gradient(135deg, var(--razorpay-blue), #1a73e8);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin: 8px 0;
+    box-shadow: 0 3px 10px rgba(51, 149, 255, 0.3);
 }
 
-.upi-btn:hover,
-.upi-btn.active {
-    border-color: var(--primary);
-    background: linear-gradient(135deg, #f8f9ff, #f0f4ff);
-    transform: translateY(-3px);
-    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
-}
-
-.upi-btn:active {
-    transform: translateY(-1px);
-}
-
-.upi-btn img {
-    width: 34px;
-    height: 34px;
-    object-fit: contain;
-}
-
-.upi-btn i {
-    font-size: 1.5rem;
-    color: var(--primary);
+.razorpay-badge i {
+    font-size: 1rem;
 }
 
 /* Payment Status */
@@ -593,20 +578,6 @@ footer a {
     .price .amount {
         font-size: 1.7rem;
     }
-    
-    .upi-apps {
-        gap: 8px;
-    }
-    
-    .upi-btn {
-        padding: 9px 4px;
-        font-size: 0.7rem;
-    }
-    
-    .upi-btn img {
-        width: 30px;
-        height: 30px;
-    }
 }
 
 /* Mobile (500px and below) */
@@ -680,19 +651,8 @@ footer a {
         font-size: 2rem;
     }
     
-    .upi-apps {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
-    }
-    
-    .upi-btn {
-        padding: 12px 8px;
-        font-size: 0.8rem;
-    }
-    
-    .upi-btn img {
-        width: 36px;
-        height: 36px;
+    .payment-methods {
+        font-size: 0.75rem;
     }
     
     /* Buttons */
@@ -741,10 +701,6 @@ footer a {
     
     .price .amount {
         font-size: 1.8rem;
-    }
-    
-    .upi-apps {
-        grid-template-columns: 1fr 1fr;
     }
     
     .star-rating label {
@@ -845,17 +801,6 @@ footer a {
         border-color: #8892ff;
     }
     
-    .upi-btn {
-        background: #2a2a3e;
-        border-color: #444;
-        color: #f0f0f0;
-    }
-    
-    .upi-btn:hover, .upi-btn.active {
-        background: #333;
-        border-color: #8892ff;
-    }
-    
     .status {
         color: #ccc;
     }
@@ -872,6 +817,10 @@ footer a {
     .loader {
         background: rgba(30, 30, 47, 0.96);
     }
+    
+    .razorpay-badge {
+        background: linear-gradient(135deg, #1a73e8, #3395ff);
+    }
 }
 
 /* ===== REDUCED MOTION ===== */
@@ -885,4 +834,11 @@ footer a {
     html {
         scroll-behavior: auto;
     }
+}
+
+/* ===== RAZORPAY CHECKOUT MODAL OVERRIDES ===== */
+/* Note: Razorpay modal styles are controlled by their SDK, 
+   but we can ensure our theme color matches */
+.razorpay-container {
+    --razorpay-theme-color: var(--primary) !important;
 }

@@ -6,6 +6,8 @@
     <title>Event Registration | Test ₹1</title>
     <link rel="stylesheet" href="css/style.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+    <!-- Razorpay SDK -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body>
     <div class="container">
@@ -76,38 +78,26 @@
                 <textarea id="remarks" rows="2" placeholder="Any special requirements..." autocomplete="off"></textarea>
             </div>
 
-            <!-- Payment Card -->
+            <!-- Payment Card - Razorpay -->
             <div class="payment-card">
                 <div class="price">
                     <span class="label">Registration Fee (TEST)</span>
                     <span class="amount">₹1</span>
                 </div>
                 
-                <div class="upi-section">
-                    <p class="upi-note"><i class="fas fa-info-circle"></i> Pay via any UPI app</p>
-                    <div class="upi-apps">
-                        <button type="button" class="upi-btn" data-app="phonepe">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/PhonePe_Logo.svg/120px-PhonePe_Logo.svg.png" alt="PhonePe">
-                            <span>PhonePe</span>
-                        </button>
-                        <button type="button" class="upi-btn" data-app="gpay">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/86/Google_Pay_Logo.svg/120px-Google_Pay_Logo.svg.png" alt="GPay">
-                            <span>GPay</span>
-                        </button>
-                        <button type="button" class="upi-btn" data-app="paytm">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Paytm_Logo.svg/120px-Paytm_Logo.svg.png" alt="Paytm">
-                            <span>Paytm</span>
-                        </button>
-                        <button type="button" class="upi-btn" data-app="any">
-                            <i class="fas fa-qrcode"></i>
-                            <span>Any UPI</span>
-                        </button>
-                    </div>
+                <div class="razorpay-section">
+                    <p class="payment-note"><i class="fas fa-shield-alt"></i> Secure Payment via Razorpay</p>
+                    <p class="payment-methods">
+                        <i class="fas fa-credit-card"></i> Cards • 
+                        <i class="fas fa-mobile-alt"></i> UPI • 
+                        <i class="fas fa-wallet"></i> Wallets • 
+                        <i class="fas fa-university"></i> Net Banking
+                    </p>
                 </div>
 
                 <p id="paymentStatus" class="status">⏳ Payment: <b>Not Done</b></p>
                 <button type="button" id="payBtn" class="btn-primary">
-                    <i class="fas fa-rupee-sign"></i> Pay ₹1 Now
+                    <i class="fas fa-rupee-sign"></i> Pay ₹1 with Razorpay
                 </button>
             </div>
 
@@ -126,6 +116,7 @@
                 <p><b>Amount:</b> ₹1 Paid (Test)</p>
                 <p><b>Time:</b> <span id="sTime"></span></p>
                 <p><b>Ref:</b> <span id="sRef"></span></p>
+                <p><b>Payment ID:</b> <span id="sPaymentId"></span></p>
             </div>
             <button onclick="window.print()" class="btn-outline"><i class="fas fa-print"></i> Print Receipt</button>
         </div>
@@ -133,12 +124,12 @@
         <!-- Loading Overlay -->
         <div id="loader" class="loader hidden">
             <div class="spin"></div>
-            <p>Submitting your registration...</p>
+            <p>Processing your registration...</p>
         </div>
     </div>
 
     <footer>
-        <p>© 2026 EventPro • Test Mode • Data Saved to Google Sheet</p>
+        <p>© 2026 EventPro • Test Mode • Razorpay Secured • Data Saved to Google Sheet</p>
     </footer>
 
     <div id="toast" class="toast hidden"></div>

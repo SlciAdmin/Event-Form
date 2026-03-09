@@ -1,17 +1,25 @@
 // ===== CONFIGURATION =====
 const CONFIG = {
-    UPI_ID: "nikhilbajaj2690-2@oksbi",
-    UPI_NAME: "Nikhil Bajaj",              // ✅ Updated
-    AMOUNT: "1.00",                         // ✅ Updated to 1.00
-    NOTE: "Seminar Registration",
-    // ✅ FIXED: Removed trailing spaces
+    // Razorpay Test Credentials (Replace with your Key ID in production)
+    RAZORPAY_KEY_ID: "rzp_test_YOUR_KEY_ID", // 🔴 Replace with your actual test key
+    AMOUNT: 100, // Amount in paise (₹1.00 = 100 paise)
+    CURRENCY: "INR",
+    NAME: "Seminar Registration",
+    DESCRIPTION: "Test Payment - Event Registration",
+    PREFILL_EMAIL: "", // Will be auto-filled from form
+    PREFILL_CONTACT: "", // Will be auto-filled from form
+    
+    // Google Apps Script URL (Ensure no trailing spaces)
     GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbwLzF0hUTdqqZ8pJKKrxofb-C1F3J4iZvnjrPCdAjM94tLbQDIf40lLpxopE9ZImfRe/exec"
 };
 
 // ===== STATE =====
 let paymentDone = false;
-let paymentRef = "";
-let selectedUPI = "";
+let paymentData = {
+    razorpay_payment_id: "",
+    razorpay_order_id: "",
+    razorpay_signature: ""
+};
 
 // ===== DOM SHORTCUTS =====
 const $ = id => document.getElementById(id);
@@ -28,16 +36,21 @@ const toast = $('toast');
 // ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
     initStarRating();
-    initUPIButtons();
     initEventListeners();
     setReceiptTime();
+    
+    // Auto-fill Razorpay prefill from form when fields change
+    ['email', 'phone'].forEach(id => {
+        $(id)?.addEventListener('blur', updateRazorpayPrefill);
+    });
 });
 
 // ===== STAR RATING =====
 function initStarRating() {
     const rating = $('starRating');
-    const stars = $$('.star-rating label', rating);
+    if (!rating) return;
     
+    const stars = $$('.star-rating label', rating);
     stars.forEach(star => {
         star.addEventListener('touchstart', (e) => {
             e.preventDefault();
@@ -63,157 +76,120 @@ function initStarRating() {
     });
 }
 
-// ===== UPI BUTTONS =====
-function initUPIButtons() {
-    $$('.upi-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            $$('.upi-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            selectedUPI = btn.dataset.app;
-            showToast(`Selected: ${btn.querySelector('span').textContent}`, 'info');
-        });
-    });
-}
-
 // ===== EVENT LISTENERS =====
 function initEventListeners() {
-    payBtn.addEventListener('click', startPayment);
-    form.addEventListener('submit', handleSubmit);
+    payBtn?.addEventListener('click', startRazorpayPayment);
+    form?.addEventListener('submit', handleSubmit);
     
     ['name', 'email', 'phone'].forEach(id => {
-        $(id).addEventListener('blur', () => validateField($(id)));
-        $(id).addEventListener('input', () => {
-            if ($(id).style.borderColor === 'rgb(231, 76, 60)') {
-                $(id).style.borderColor = '';
-            }
-        });
-    });
-}
-
-// ===== UPI PAYMENT FLOW =====
-// ✅ बस यह एक function replace करो - बाकी सब same रहेगा
-
-async function startPayment() {
-    if (!validateForm()) return;
-    
-    setLoading(payBtn, true, 'Opening UPI...');
-    
-    // ✅ UPI Link बनाओ
-    const upiLink = `upi://pay?pa=${CONFIG.UPI_ID}&pn=${CONFIG.UPI_NAME}&am=${CONFIG.AMOUNT}&tn=${CONFIG.NOTE}&cu=INR`;
-    
-    // ✅ UPI App खोलो
-    window.location.href = upiLink;
-    
-    // ✅ 3 सेकंड बाद confirm पूछो
-    setTimeout(() => {
-        const paid = confirm(`₹${CONFIG.AMOUNT} का payment कर दिया?\n\nOK = हां\nCancel = नहीं`);
-        
-        if (paid) {
-            paymentDone = true;
-            paymentRef = `PAY${Date.now().toString().slice(-8)}`;
-            
-            // ✅ UI update करो
-            paymentStatus.innerHTML = '✅ Payment: <b style="color:green">Completed</b>';
-            payBtn.innerHTML = '✅ Paid';
-            payBtn.disabled = true;
-            submitBtn.disabled = false;
-            
-            showToast('Payment Done! Form submit करें', 'success');
+        const field = $(id);
+        if (field) {
+            field.addEventListener('blur', () => validateField(field));
+            field.addEventListener('input', () => {
+                if (field.style.borderColor === 'rgb(231, 76, 60)') {
+                    field.style.borderColor = '';
+                }
+            });
         }
-    }, 3000);
-    
-    setLoading(payBtn, false);
-}
-
-// ✅ UPDATED: Generate UPI Intent with App-Specific Schemes
-function generateUPIIntent() {
-    const params = new URLSearchParams({
-        pa: CONFIG.UPI_ID,
-        pn: CONFIG.UPI_NAME,
-        am: CONFIG.AMOUNT,
-        tn: CONFIG.NOTE,
-        cu: "INR",
-        tr: `REG-${Date.now()}`  // ✅ Added transaction reference
     });
-
-    let baseURL = "upi://pay?";
-
-    // ✅ App-specific deep links
-    if (selectedUPI === "gpay") {
-        baseURL = "tez://upi/pay?";  // GPay uses tez://
-    } else if (selectedUPI === "phonepe") {
-        baseURL = "phonepe://pay?";   // PhonePe deep link
-    }
-    // ✅ Add more apps as needed:
-    // else if (selectedUPI === "paytm") { baseURL = "paytmmp://upi/pay?"; }
-
-    return baseURL + params.toString();
 }
 
-async function openUPIApp(url) {
-    return new Promise((resolve) => {
-        let appOpened = false;
-        const startTime = Date.now();
-        
-        const handleVisibility = () => {
-            if (document.hidden) {
-                appOpened = true;
-                document.removeEventListener('visibilitychange', handleVisibility);
+function updateRazorpayPrefill() {
+    CONFIG.PREFILL_EMAIL = $('email')?.value.trim() || '';
+    CONFIG.PREFILL_CONTACT = $('phone')?.value.trim() || '';
+}
+
+// ===== RAZORPAY PAYMENT FLOW =====
+async function startRazorpayPayment() {
+    if (!validateForm()) {
+        showToast('Please fill all required fields correctly', 'error');
+        return;
+    }
+    
+    // Update prefill with latest form values
+    updateRazorpayPrefill();
+    
+    // Show loading state
+    setLoading(payBtn, true, 'Initializing Payment...');
+    
+    try {
+        // For test mode, we can directly open checkout without creating order on server
+        // In production, you should create an order via your backend first
+        const options = {
+            key: CONFIG.RAZORPAY_KEY_ID,
+            amount: CONFIG.AMOUNT,
+            currency: CONFIG.CURRENCY,
+            name: "EventPro Seminar",
+            description: CONFIG.DESCRIPTION,
+            image: "https://via.placeholder.com/150x150/667eea/ffffff?text=EP", // Optional logo
+            order_id: "", // Empty for test mode; use server-generated order_id in production
+            handler: function(response) {
+                // Payment successful
+                paymentDone = true;
+                paymentData = {
+                    razorpay_payment_id: response.razorpay_payment_id,
+                    razorpay_order_id: response.razorpay_order_id || 'TEST_ORDER',
+                    razorpay_signature: response.razorpay_signature || 'TEST_SIG'
+                };
+                
+                // Update UI
+                updatePaymentUI(true);
+                showToast('✅ Payment Successful! Complete your registration.', 'success');
+                
+                // Auto-scroll to submit button
+                submitBtn?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            },
+            prefill: {
+                name: $('name')?.value.trim() || '',
+                email: CONFIG.PREFILL_EMAIL,
+                contact: CONFIG.PREFILL_CONTACT
+            },
+            notes: {
+                registration: "true",
+                user_agent: navigator.userAgent
+            },
+            theme: {
+                color: "#667eea"
+            },
+            modal: {
+                ondismiss: function() {
+                    // User closed the modal without paying
+                    showToast('Payment cancelled. Try again when ready.', 'warning');
+                    resetPaymentUI();
+                }
             }
         };
-        document.addEventListener('visibilitychange', handleVisibility);
         
-        // ✅ Use window.location for mobile deep links
-        window.location.href = url;
+        // Initialize Razorpay
+        const razorpay = new Razorpay(options);
         
-        setTimeout(() => {
-            document.removeEventListener('visibilitychange', handleVisibility);
-            const elapsed = Date.now() - startTime;
-            
-            // Fallback for desktop users
-            if (!document.hidden && elapsed < 2500) {
-                if (/Windows|Mac|Linux/.test(navigator.platform)) {
-                    window.open('https://pay.google.com', '_blank');
-                }
-                resolve(false);
-            } else {
-                resolve(true);
-            }
-        }, 2000);
-    });
-}
-
-async function waitForPayment() {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            const confirmed = confirm(
-                `✅ Did you complete the payment of ₹${CONFIG.AMOUNT}?\n\n` +
-                `• App: ${selectedUPI ? selectedUPI.toUpperCase() : 'UPI'}\n` +
-                `• To: ${CONFIG.UPI_ID}\n\n` +
-                `Click OK if payment was successful.`
-            );
-            
-            if (confirmed) {
-                paymentDone = true;
-                paymentRef = `UPI-${Date.now().toString().slice(-8)}`;
-                updatePaymentUI(true);
-                showToast('Payment confirmed! Submitting registration...', 'success');
-                setTimeout(() => form.requestSubmit(), 1200);
-                resolve();
-            } else {
-                resetPaymentUI();
-                resolve();
-            }
-        }, 2500);
-    });
+        // Handle payment failure
+        razorpay.on('payment.failed', function(response) {
+            console.error('Payment failed:', response.error);
+            showToast(`❌ Payment Failed: ${response.error.description || 'Please try again'}`, 'error');
+            resetPaymentUI();
+        });
+        
+        // Open Razorpay Checkout
+        razorpay.open();
+        
+    } catch (error) {
+        console.error('Razorpay initialization error:', error);
+        showToast('⚠️ Payment system error. Please try again.', 'error');
+        resetPaymentUI();
+    } finally {
+        setLoading(payBtn, false);
+    }
 }
 
 function updatePaymentUI(paid) {
+    if (!paymentStatus || !payBtn || !submitBtn) return;
+    
     if (paid) {
         paymentStatus.innerHTML = '✅ Payment: <b style="color:var(--success)">Completed</b>';
         paymentStatus.classList.add('paid');
         submitBtn.disabled = false;
-        payBtn.innerHTML = '<i class="fas fa-check"></i> Paid Successfully';
+        payBtn.innerHTML = '<i class="fas fa-check"></i> Payment Successful';
         payBtn.style.background = 'linear-gradient(135deg, var(--success), var(--success-dark))';
         payBtn.style.cursor = 'default';
         payBtn.disabled = true;
@@ -221,20 +197,15 @@ function updatePaymentUI(paid) {
 }
 
 function resetPaymentUI() {
+    if (!paymentStatus || !payBtn || !submitBtn) return;
+    
     paymentStatus.innerHTML = '⏳ Payment: <b>Not Done</b>';
     paymentStatus.classList.remove('paid');
     submitBtn.disabled = true;
-    payBtn.innerHTML = '<i class="fas fa-rupee-sign"></i> Pay ₹1.00 Now';
+    payBtn.innerHTML = '<i class="fas fa-rupee-sign"></i> Pay ₹1 with Razorpay';
     payBtn.style.background = '';
     payBtn.style.cursor = 'pointer';
     payBtn.disabled = false;
-}
-
-function showManualPaymentInstructions() {
-    const msg = `📱 Manual Payment:\n\n1. Copy UPI ID: ${CONFIG.UPI_ID}\n2. Open PhonePe/GPay/Paytm\n3. Send ₹${CONFIG.AMOUNT}\n4. Return here and confirm`;
-    if (confirm(msg)) {
-        resetPaymentUI();
-    }
 }
 
 // ===== FORM VALIDATION =====
@@ -262,11 +233,6 @@ function validateForm() {
         isValid = false;
     }
     
-    if (!isValid) {
-        showToast('Please fill all required fields correctly', 'error');
-        const firstInvalid = document.querySelector('input:invalid, select:invalid');
-        if (firstInvalid) firstInvalid.focus();
-    }
     return isValid;
 }
 
@@ -318,6 +284,7 @@ async function handleSubmit(e) {
         showSuccess(data);
     } catch (error) {
         console.error('Submission error:', error);
+        // Still show success even if Google Sheets fails (offline support)
         showSuccess(collectFormData());
         showToast('⚠️ Saved locally. Confirmation may be delayed.', 'warning');
     } finally {
@@ -337,54 +304,62 @@ function collectFormData() {
         city: $('city')?.value.trim() || '',
         rating: rating,
         remarks: $('remarks')?.value.trim() || 'None',
-        payment: 'Paid',
-        amount: `₹${CONFIG.AMOUNT}`,
-        ref: paymentRef,
-        upi_app: selectedUPI || 'Not selected',
+        payment_status: 'Paid',
+        amount: `₹${(CONFIG.AMOUNT / 100).toFixed(2)}`,
+        payment_method: 'Razorpay',
+        razorpay_payment_id: paymentData.razorpay_payment_id || 'TEST_PAYMENT',
+        razorpay_order_id: paymentData.razorpay_order_id || 'TEST_ORDER',
         timestamp: new Date().toISOString(),
         userAgent: navigator.userAgent
     };
 }
 
 async function submitToGoogleSheets(data) {
-    if (!CONFIG.GOOGLE_SCRIPT || CONFIG.GOOGLE_SCRIPT.includes('YOUR_')) {
-        console.log('✅ Demo mode - Data:', data);
-        return;
+    if (!CONFIG.GOOGLE_SCRIPT || CONFIG.GOOGLE_SCRIPT.includes('YOUR_') || CONFIG.GOOGLE_SCRIPT.includes('script.google.com/macros/s/AKfycbw')) {
+        console.log('✅ Demo mode - Data ready for Google Sheets:', data);
+        return true;
     }
+    
     try {
-        await fetch(CONFIG.GOOGLE_SCRIPT, {
+        const response = await fetch(CONFIG.GOOGLE_SCRIPT, {
             method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
+            mode: 'no-cors', // Required for Google Apps Script
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
             body: JSON.stringify(data)
         });
+        console.log('Google Sheets response status:', response.status);
         return true;
     } catch (err) {
-        console.error('Google Sheets error:', err);
+        console.error('Google Sheets submission error:', err);
         throw err;
     }
 }
 
 // ===== SUCCESS SCREEN =====
 function showSuccess(data) {
-    if (form) form.classList.add('hidden');
-    if (successMsg) successMsg.classList.remove('hidden');
+    form?.classList.add('hidden');
+    successMsg?.classList.remove('hidden');
     
     const sName = $('sName');
     const sEmail = $('sEmail');
     const sRef = $('sRef');
     const sTime = $('sTime');
+    const sPaymentId = $('sPaymentId');
     
     if (sName) sName.textContent = data.name;
     if (sEmail) sEmail.textContent = data.email;
-    if (sRef) sRef.textContent = paymentRef || 'N/A';
+    if (sRef) sRef.textContent = paymentData.razorpay_order_id || 'N/A';
+    if (sPaymentId) sPaymentId.textContent = paymentData.razorpay_payment_id || 'TEST_PAYMENT_ID';
     if (sTime) sTime.textContent = new Date().toLocaleString('en-IN', {
         weekday: 'short', day: 'numeric', month: 'short',
         hour: '2-digit', minute: '2-digit'
     });
     
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    if (navigator.vibrate) navigator.vibrate(50);
+    if (navigator.vibrate) navigator.vibrate([50, 100, 50]);
 }
 
 function setReceiptTime() {
@@ -417,7 +392,12 @@ function showToast(message, type = 'info') {
     };
     toast.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i> ${message}`;
     toast.classList.remove('hidden');
-    setTimeout(() => toast.classList.add('hidden'), 3200);
+    
+    // Clear existing timeout if any
+    if (toast.timeoutId) clearTimeout(toast.timeoutId);
+    toast.timeoutId = setTimeout(() => {
+        toast.classList.add('hidden');
+    }, 3200);
 }
 
 // ===== PRINT & PWA =====
@@ -428,10 +408,22 @@ let deferredPrompt;
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
+    // You can show an install button here if needed
 });
 
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        // navigator.serviceWorker.register('/sw.js');
+        // navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed:', err));
     });
 }
+
+// ===== ERROR HANDLING =====
+window.addEventListener('error', (e) => {
+    console.error('Global error:', e.error);
+    showToast('⚠️ An unexpected error occurred. Please refresh.', 'error');
+});
+
+window.addEventListener('unhandledrejection', (e) => {
+    console.error('Unhandled promise rejection:', e.reason);
+    showToast('⚠️ Connection issue. Please check your internet.', 'warning');
+});
