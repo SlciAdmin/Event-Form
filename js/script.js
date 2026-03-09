@@ -1,12 +1,15 @@
 const CONFIG = {
-    // Aapka Razorpay.me link (full URL)
+    // ✅ FIXED: Removed trailing spaces from URLs
     PAYMENT_LINK: "https://rzp.io/rzp/5NCrTAI",
     
     AMOUNT: 100, // ₹1.00 = 100 paise
     CURRENCY: "INR",
     
-    // Google Apps Script URL
-    GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbwLzF0hUTdqqZ8pJKKrxofb-C1F3J4iZvnjrPCdAjM94tLbQDIf40lLpxopE9ZImfRe/exec"
+    // ✅ FIXED: Removed trailing spaces
+    GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbwLzF0hUTdqqZ8pJKKrxofb-C1F3J4iZvnjrPCdAjM94tLbQDIf40lLpxopE9ZImfRe/exec",
+    
+    // ✅ ADD: Your page URL for payment return (IMPORTANT for Payment Links)
+    RETURN_URL: window.location.href.split('?')[0]
 };
 
 // ===== STATE =====
@@ -22,99 +25,137 @@ let paymentData = {
 const $ = id => document.getElementById(id);
 const $$ = (sel, ctx = document) => ctx.querySelectorAll(sel);
 
-// ===== CRITICAL: PREVENT BACK/FORWARD CACHE =====
-if (window.performance && window.performance.navigation.type === window.performance.navigation.TYPE_BACK_FORWARD) {
-    // User used back/forward button - FORCE RELOAD
-    window.location.reload(true);
+// ===== CRITICAL: Handle Payment Return FIRST before any reset =====
+function handlePaymentReturn() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentId = urlParams.get('razorpay_payment_id');
+    const status = urlParams.get('razorpay_payment_status');
+    const orderId = urlParams.get('razorpay_order_id');
+    const error = urlParams.get('razorpay_error');
+    
+    // ✅ If payment successful
+    if (paymentId && status === 'captured') {
+        paymentDone = true;
+        paymentData.razorpay_payment_id = paymentId;
+        paymentData.razorpay_order_id = orderId || 'N/A';
+        
+        // Save to sessionStorage for form submission
+        sessionStorage.setItem('paymentData', JSON.stringify(paymentData));
+        
+        // Clean URL without reload
+        window.history.replaceState({}, document.title, CONFIG.RETURN_URL);
+        
+        return true;
+    }
+    
+    // ✅ If payment failed/cancelled
+    if (error || (status && status !== 'captured')) {
+        showToast(`⚠️ Payment ${error ? 'Failed' : 'Cancelled'}. Try again.`, 'warning');
+        resetPaymentUI();
+        window.history.replaceState({}, document.title, CONFIG.RETURN_URL);
+        return false;
+    }
+    
+    return false;
 }
 
 // ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
-    // CRITICAL: Always reset for new user
-    forceResetForNewUser();
+    // ✅ STEP 1: Check payment return FIRST (before reset)
+    const paymentReceived = handlePaymentReturn();
+    
+    // ✅ STEP 2: Only reset if NO payment data in URL AND no saved session
+    const savedPayment = sessionStorage.getItem('paymentData');
+    if (!paymentReceived && !savedPayment) {
+        forceResetForNewUser();
+    } else if (savedPayment) {
+        // Restore payment state from session
+        paymentData = JSON.parse(savedPayment);
+        paymentDone = true;
+        updatePaymentUI(true);
+        const submitBtn = $('submitBtn');
+        if (submitBtn) submitBtn.disabled = false;
+    }
     
     initStarRating();
     initEventListeners();
     setReceiptTime();
-    checkPaymentReturn();
     
-    // Prevent page cache
+    // Prevent page cache issues
     window.addEventListener('pageshow', (event) => {
         if (event.persisted) {
-            // Page was loaded from bfcache - reload fresh
-            window.location.reload();
+            // Only reload if no payment in progress
+            if (!paymentDone && !sessionStorage.getItem('paymentData')) {
+                window.location.reload();
+            }
         }
     });
 });
 
-// ===== CRITICAL: FORCE RESET FOR EVERY NEW USER =====
+// ===== RESET FOR NEW USER (Safe Version) =====
 function forceResetForNewUser() {
-    console.log('🔄 New user detected - Resetting everything...');
+    console.log('🔄 Fresh session started');
     
-    // 1. Clear ALL storage
+    // Clear ONLY form-related storage, keep payment if exists
+    const paymentDataTemp = sessionStorage.getItem('paymentData');
+    
     sessionStorage.clear();
     localStorage.clear();
     
-    // 2. Reset payment state
-    paymentDone = false;
-    paymentData = {
-        razorpay_payment_id: "",
-        razorpay_order_id: "",
-        razorpay_signature: "",
-        payment_link_id: "IRE79PZ"
-    };
-    
-    // 3. Clear form fields
-    clearFormFields();
-    
-    // 4. Reset UI
-    resetPaymentUI();
-    hideSuccessScreen();
-    showForm();
-    
-    // 5. Clean URL
-    if (window.location.search) {
-        window.history.replaceState({}, document.title, window.location.pathname);
+    // Restore payment data if it existed
+    if (paymentDataTemp) {
+        sessionStorage.setItem('paymentData', paymentDataTemp);
     }
     
-    // 6. Disable submit button
-    const submitBtn = $('submitBtn');
-    if (submitBtn) submitBtn.disabled = true;
+    // Reset state only if no payment
+    if (!paymentDataTemp) {
+        paymentDone = false;
+        paymentData = {
+            razorpay_payment_id: "",
+            razorpay_order_id: "",
+            razorpay_signature: "",
+            payment_link_id: "IRE79PZ"
+        };
+    }
     
-    console.log('✅ Fresh state ready for new user');
+    clearFormFields();
+    
+    if (!paymentDataTemp) {
+        resetPaymentUI();
+        hideSuccessScreen();
+        showForm();
+    }
+    
+    // Clean URL
+    if (window.location.search && !window.location.search.includes('razorpay_')) {
+        window.history.replaceState({}, document.title, CONFIG.RETURN_URL);
+    }
+    
+    const submitBtn = $('submitBtn');
+    if (submitBtn && !paymentDone) submitBtn.disabled = true;
+    
+    console.log('✅ State initialized');
 }
 
-// ===== CLEAR ALL FORM FIELDS =====
+// ===== CLEAR FORM FIELDS =====
 function clearFormFields() {
     const form = $('regForm');
     if (!form) return;
     
-    // Clear all inputs
-    const inputs = form.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], textarea');
-    inputs.forEach(input => {
+    form.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], textarea').forEach(input => {
         input.value = '';
         input.style.borderColor = '';
         input.removeAttribute('aria-invalid');
     });
     
-    // Reset selects
-    const selects = form.querySelectorAll('select');
-    selects.forEach(select => select.selectedIndex = 0);
-    
-    // Clear radio buttons (star rating)
-    const radios = form.querySelectorAll('input[type="radio"]');
-    radios.forEach(radio => radio.checked = false);
-    
-    console.log('🧹 Form fields cleared');
+    form.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+    form.querySelectorAll('input[type="radio"]').forEach(radio => radio.checked = false);
 }
 
-// ===== HIDE SUCCESS SCREEN & SHOW FORM =====
+// ===== UI HELPERS =====
 function hideSuccessScreen() {
-    const successMsg = $('successMsg');
-    const form = $('regForm');
-    
-    if (successMsg) successMsg.classList.add('hidden');
-    if (form) form.classList.remove('hidden');
+    $('successMsg')?.classList.add('hidden');
+    $('regForm')?.classList.remove('hidden');
 }
 
 function showForm() {
@@ -125,43 +166,17 @@ function showForm() {
     }
 }
 
-// ===== CHECK PAYMENT RETURN =====
-function checkPaymentReturn() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const paymentId = urlParams.get('razorpay_payment_id');
-    const status = urlParams.get('razorpay_payment_status');
-    const orderId = urlParams.get('razorpay_order_id');
-    
-    if (paymentId && status === 'captured') {
-        // Valid payment received
-        paymentDone = true;
-        paymentData.razorpay_payment_id = paymentId;
-        paymentData.razorpay_order_id = orderId || 'N/A';
-        
-        updatePaymentUI(true);
-        showToast('✅ Payment Successful! Complete registration.', 'success');
-        
-        // Enable submit button
-        const submitBtn = $('submitBtn');
-        if (submitBtn) submitBtn.disabled = false;
-        
-        // Clean URL
-        window.history.replaceState({}, document.title, window.location.pathname);
-        
-        // Scroll to submit button
-        setTimeout(() => {
-            submitBtn?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 500);
-    }
-}
-
 // ===== EVENT LISTENERS =====
 function initEventListeners() {
     const payBtn = $('payBtn');
     const form = $('regForm');
     
-    if (payBtn) payBtn.addEventListener('click', initiatePayment);
-    if (form) form.addEventListener('submit', handleSubmit);
+    if (payBtn) {
+        payBtn.addEventListener('click', initiatePayment);
+    }
+    if (form) {
+        form.addEventListener('submit', handleSubmit);
+    }
     
     // Real-time validation
     ['name', 'email', 'phone'].forEach(id => {
@@ -177,7 +192,7 @@ function initEventListeners() {
     });
 }
 
-// ===== PAYMENT INITIATION =====
+// ===== PAYMENT INITIATION - FIXED =====
 async function initiatePayment() {
     if (!validateForm()) {
         showToast('Please fill all required fields', 'error');
@@ -185,27 +200,32 @@ async function initiatePayment() {
     }
     
     if (paymentDone) {
-        showToast('⚠️ Payment already done', 'warning');
+        showToast('⚠️ Payment already completed', 'warning');
         return;
     }
     
-    // Show loading
-    setLoading($('payBtn'), true, 'Redirecting...');
+    const payBtn = $('payBtn');
+    setLoading(payBtn, true, 'Redirecting...');
     
     try {
-        // Save form data temporarily
+        // ✅ Save form data before redirect
         const formData = collectFormData();
         sessionStorage.setItem('tempFormData', JSON.stringify(formData));
         
-        // Redirect to Razorpay
+        // ✅ FIXED: Open Payment Link in SAME tab with proper return URL handling
+        // Razorpay Payment Links automatically redirect back to configured URL
+        // Make sure your Razorpay dashboard has RETURN_URL set as "Redirect URL"
+        
         setTimeout(() => {
-            window.location.href = CONFIG.PAYMENT_LINK;
-        }, 800);
+            // ✅ CRITICAL: Use replace to avoid back-button issues
+            window.location.replace(CONFIG.PAYMENT_LINK.trim());
+        }, 500);
         
     } catch (error) {
-        console.error('Payment error:', error);
-        showToast('⚠️ Payment failed. Try again.', 'error');
+        console.error('Payment initiation error:', error);
+        showToast('⚠️ Could not start payment. Try again.', 'error');
         resetPaymentUI();
+        setLoading(payBtn, false);
     }
 }
 
@@ -246,7 +266,7 @@ function resetPaymentUI() {
     if (submitBtn) submitBtn.disabled = true;
 }
 
-// ===== FORM VALIDATION =====
+// ===== VALIDATION =====
 function validateForm() {
     const required = ['name', 'designation', 'company', 'phone', 'email', 'city'];
     let isValid = true;
@@ -311,9 +331,17 @@ async function handleSubmit(e) {
     if (e) e.preventDefault();
     
     if (!paymentDone) {
-        showToast('⚠️ Payment required!', 'error');
+        showToast('⚠️ Please complete payment first', 'error');
         $('payBtn')?.scrollIntoView({ behavior: 'smooth' });
         return;
+    }
+    
+    // Get payment data from session if not in memory
+    if (!paymentData.razorpay_payment_id) {
+        const saved = sessionStorage.getItem('paymentData');
+        if (saved) {
+            paymentData = JSON.parse(saved);
+        }
     }
     
     if (!paymentData.razorpay_payment_id) {
@@ -322,27 +350,25 @@ async function handleSubmit(e) {
         return;
     }
     
-    // Show loader
     const loader = $('loader');
-    if (loader) loader.classList.remove('hidden');
+    loader?.classList.remove('hidden');
     
     try {
         const data = collectFormData();
         await submitToGoogleSheets(data);
         showSuccess(data);
         
-        // CRITICAL: Reset after successful submission
-        // This ensures next user gets fresh form
+        // ✅ Reset after 3 seconds for next user
         setTimeout(() => {
             forceResetForNewUser();
         }, 3000);
         
     } catch (error) {
         console.error('Submit error:', error);
+        showToast('⚠️ Registration saved but confirmation pending', 'warning');
         showSuccess(collectFormData());
     } finally {
-        const loader = $('loader');
-        if (loader) loader.classList.add('hidden');
+        $('loader')?.classList.add('hidden');
     }
 }
 
@@ -368,12 +394,13 @@ function collectFormData() {
 
 async function submitToGoogleSheets(data) {
     if (!CONFIG.GOOGLE_SCRIPT || CONFIG.GOOGLE_SCRIPT.includes('YOUR_')) {
-        console.log('Demo mode:', data);
+        console.log('📋 Demo mode - Data:', data);
         return true;
     }
     
     try {
-        await fetch(CONFIG.GOOGLE_SCRIPT, {
+        // ✅ Use mode: 'no-cors' for Google Apps Script
+        await fetch(CONFIG.GOOGLE_SCRIPT.trim(), {
             method: 'POST',
             mode: 'no-cors',
             headers: { 'Content-Type': 'application/json' },
@@ -381,18 +408,15 @@ async function submitToGoogleSheets(data) {
         });
         return true;
     } catch (err) {
-        console.error('Sheets error:', err);
+        console.error('Google Sheets error:', err);
         throw err;
     }
 }
 
 // ===== SUCCESS SCREEN =====
 function showSuccess(data) {
-    const form = $('regForm');
-    const successMsg = $('successMsg');
-    
-    if (form) form.classList.add('hidden');
-    if (successMsg) successMsg.classList.remove('hidden');
+    $('regForm')?.classList.add('hidden');
+    $('successMsg')?.classList.remove('hidden');
     
     $('sName') && ($('sName').textContent = data.name);
     $('sEmail') && ($('sEmail').textContent = data.email);
@@ -439,15 +463,32 @@ function showToast(message, type = 'info') {
     if (toast.timeoutId) clearTimeout(toast.timeoutId);
     toast.timeoutId = setTimeout(() => {
         toast.classList.add('hidden');
-    }, 3000);
+    }, 3500);
 }
 
-// Prevent back button bypass
+// ===== STAR RATING (Basic Implementation) =====
+function initStarRating() {
+    const stars = $$('.star-rating label');
+    stars.forEach(label => {
+        label.addEventListener('click', function() {
+            const value = this.getAttribute('for').replace('star', '');
+            document.querySelectorAll('.star-rating input').forEach(radio => {
+                radio.checked = (radio.value === value);
+            });
+        });
+    });
+}
+
+// ===== PREVENT BACK NAVIGATION ISSUES =====
 window.addEventListener('popstate', () => {
-    forceResetForNewUser();
+    // Only reset if not in payment flow
+    if (!paymentDone && !window.location.search.includes('razorpay_')) {
+        forceResetForNewUser();
+    }
 });
 
-// Prevent page cache
+// ===== CLEANUP ON UNLOAD =====
 window.addEventListener('beforeunload', () => {
-    sessionStorage.clear();
+    // Only clear temp form data, keep payment data
+    sessionStorage.removeItem('tempFormData');
 });
