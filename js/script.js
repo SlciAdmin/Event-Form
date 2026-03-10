@@ -1,14 +1,13 @@
 /**
- * Event Registration System - FULLY FIXED
+ * Event Registration System - FULLY WORKING
+ * Feedback + Audit with Razorpay Payment
  */
+
 const CONFIG = {
   PAYMENT_LINK: "https://rzp.io/rzp/5NCrTAI",
   AMOUNT: 99900,
   CURRENCY: "INR",
-  
-  // ✅ NO TRAILING SPACES - Exact URL
-  GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycby-CCVNdzSYRrG9BBbc3AflAVvtTpKmlitmJAXsK-GzUqVur5xZxQxvWK0_1qGTPAMi5Q/exec",
-  
+  GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbywqI8MUkRrIMi-VsYADWO05KtCJOMCaeZAp8s7FuBEbIi3W2JSfFFkVISO8Yg-XNgg/exec",
   RETURN_URL: window.location.href.split('?')[0],
   DEBUG: true
 };
@@ -34,52 +33,32 @@ function debug(msg, data = null) {
 
 function showView(viewName) {
   currentView = viewName;
-  const landingPage = $('landingPage');
-  const feedbackForm = $('feedbackForm');
-  const paidForm = $('paidForm');
-  const successMsg = $('successMsg');
-
-  if (landingPage) {
-    landingPage.classList.add('hidden');
-    landingPage.classList.remove('active-form');
-  }
-  if (feedbackForm) {
-    feedbackForm.classList.add('hidden-form');
-    feedbackForm.classList.remove('active-form');
-  }
-  if (paidForm) {
-    paidForm.classList.add('hidden-form');
-    paidForm.classList.remove('active-form');
-  }
-  if (successMsg) {
-    successMsg.classList.add('hidden');
-    successMsg.classList.remove('active-form');
-  }
+  
+  $('landingPage')?.classList.add('hidden');
+  $('landingPage')?.classList.remove('active-form');
+  $('feedbackForm')?.classList.add('hidden-form');
+  $('feedbackForm')?.classList.remove('active-form');
+  $('paidForm')?.classList.add('hidden-form');
+  $('paidForm')?.classList.remove('active-form');
+  $('successMsg')?.classList.add('hidden');
+  $('successMsg')?.classList.remove('active-form');
 
   switch(viewName) {
     case 'landing':
-      if (landingPage) {
-        landingPage.classList.remove('hidden');
-        landingPage.classList.add('active-form');
-      }
+      $('landingPage')?.classList.remove('hidden');
+      $('landingPage')?.classList.add('active-form');
       break;
     case 'feedback':
-      if (feedbackForm) {
-        feedbackForm.classList.remove('hidden-form');
-        feedbackForm.classList.add('active-form');
-      }
+      $('feedbackForm')?.classList.remove('hidden-form');
+      $('feedbackForm')?.classList.add('active-form');
       break;
     case 'paid':
-      if (paidForm) {
-        paidForm.classList.remove('hidden-form');
-        paidForm.classList.add('active-form');
-      }
+      $('paidForm')?.classList.remove('hidden-form');
+      $('paidForm')?.classList.add('active-form');
       break;
     case 'success':
-      if (successMsg) {
-        successMsg.classList.remove('hidden');
-        successMsg.classList.add('active-form');
-      }
+      $('successMsg')?.classList.remove('hidden');
+      $('successMsg')?.classList.add('active-form');
       break;
   }
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -120,12 +99,11 @@ function handlePaymentReturn() {
       debug('✅ Submit button enabled');
     }
 
+    // Auto-submit after 1 second
     setTimeout(() => {
       if (validatePaidForm()) {
         debug('🔄 Auto-submitting paid form after payment...');
         handlePaidSubmit(null, true);
-      } else {
-        debug('⚠️ Form validation failed');
       }
     }, 1000);
 
@@ -150,29 +128,25 @@ document.addEventListener('DOMContentLoaded', () => {
   debug('🚀 DOM Content Loaded');
   showView('landing');
 
-  const feedbackBtn = $('showFeedbackBtn');
-  const paidBtn = $('showPaidBtn');
+  $('showFeedbackBtn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    debug('🖱️ Feedback button clicked');
+    showView('feedback');
+    initFeedbackForm();
+  });
 
-  if (feedbackBtn) {
-    feedbackBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      debug('🖱️ Feedback button clicked');
-      showView('feedback');
-      initFeedbackForm();
-    });
-  }
-
-  if (paidBtn) {
-    paidBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      debug('🖱️ Audit button clicked');
-      showView('paid');
-      initPaidForm();
-    });
-  }
+  $('showPaidBtn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    debug('🖱️ Audit button clicked');
+    showView('paid');
+    initPaidForm();
+  });
 
   initFeedbackForm();
   initPaidForm();
+  
+  // Check for payment return on page load
+  handlePaymentReturn();
 });
 
 function initFeedbackForm() {
@@ -184,7 +158,7 @@ function initFeedbackForm() {
 
   initStarRating('fb_starRating');
 
-  ['fb_name', 'fb_email', 'fb_phone', 'fb_city', 'fb_employees'].forEach(id => {
+  ['fb_name', 'fb_email', 'fb_phone', 'fb_city', 'fb_employees', 'fb_designation', 'fb_company'].forEach(id => {
     const field = $(id);
     if (field) {
       field.addEventListener('blur', () => validateField(field, 'feedback'));
@@ -214,8 +188,7 @@ function initPaidForm() {
   const newForm = form.cloneNode(true);
   form.parentNode.replaceChild(newForm, form);
 
-  handlePaymentReturn();
-
+  // Check for saved payment
   const savedPayment = sessionStorage.getItem('paymentData');
   if (savedPayment && currentView === 'paid') {
     try {
@@ -244,7 +217,7 @@ function initPaidForm() {
       try {
         const formData = collectPaidFormData();
         sessionStorage.setItem('tempPaidData', JSON.stringify(formData));
-        debug('💾 Form data saved');
+        debug('💾 Form data saved to session');
       } catch (err) {
         debug('⚠️ Failed to save temp data', err);
       }
@@ -263,7 +236,7 @@ function initPaidForm() {
     }
   });
 
-  ['name', 'email', 'phone', 'city', 'employees'].forEach(id => {
+  ['name', 'email', 'phone', 'city', 'employees', 'designation', 'company'].forEach(id => {
     const field = $(id);
     if (field) {
       field.addEventListener('blur', () => validateField(field, 'paid'));
@@ -327,6 +300,7 @@ function validateField(field, formType) {
 function validateFeedbackForm() {
   let isValid = true;
   const requiredFields = ['fb_name', 'fb_designation', 'fb_company', 'fb_phone', 'fb_email', 'fb_city', 'fb_employees'];
+  
   requiredFields.forEach(id => {
     const field = $(id);
     if (field && !validateField(field, 'feedback')) {
@@ -351,6 +325,7 @@ function validateFeedbackForm() {
 function validatePaidForm() {
   let isValid = true;
   const requiredFields = ['name', 'designation', 'company', 'phone', 'email', 'city', 'employees'];
+  
   requiredFields.forEach(id => {
     const field = $(id);
     if (field && !validateField(field, 'paid')) {
@@ -484,6 +459,7 @@ async function handlePaidSubmit(e = null, autoSubmit = false) {
     return;
   }
 
+  // Restore payment data if needed
   if (!paymentData.razorpay_payment_id) {
     try {
       const saved = sessionStorage.getItem('paymentData');
@@ -511,6 +487,11 @@ async function handlePaidSubmit(e = null, autoSubmit = false) {
 
     await submitToGoogleSheets(data, 'audit');
     showSuccess(data, 'paid');
+    
+    // Clear session after successful submission
+    sessionStorage.removeItem('paymentData');
+    sessionStorage.removeItem('tempPaidData');
+    
   } catch (error) {
     console.error('Paid submission error:', error);
     showToast('⚠️ Registration saved', 'warning');
@@ -605,7 +586,7 @@ async function submitToGoogleSheets(data, formType) {
   } catch (error) {
     console.error(`Google Sheets error (${formType}):`, error);
     debug(`❌ Error:`, error);
-    return false;
+    throw error;
   }
 }
 
@@ -618,7 +599,7 @@ function showSuccess(data, formType) {
 
   successMsg.classList.remove('hidden');
 
-  // ✅ FEEDBACK ke liye - ONLY Minimal Message
+  // ✅ FEEDBACK - Minimal Message
   if (formType === 'feedback') {
     successMsg.innerHTML = `
       <div class="success-icon" style="font-size:4rem;color:var(--success);margin-bottom:15px">
@@ -633,9 +614,8 @@ function showSuccess(data, formType) {
       </button>
     `;
     debug('🎉 Minimal success screen for feedback');
-    
   } 
-  // ✅ PAID/AUDIT ke liye - Full Receipt (unchanged)
+  // ✅ PAID/AUDIT - Full Receipt
   else {
     const mappings = {
       sName: data.name,
@@ -668,7 +648,6 @@ function showSuccess(data, formType) {
       successTitle.textContent = '✅ Registration Successful!';
     }
 
-    // Print button sirf paid ke liye
     const printBtn = successMsg.querySelector('.btn-outline');
     if (printBtn) printBtn.style.display = 'inline-flex';
 
