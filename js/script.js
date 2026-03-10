@@ -8,7 +8,7 @@ const CONFIG = {
   CURRENCY: "INR",
   
   // ✅ FIXED: No trailing spaces
-  GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbzq59DmEApdYfiABMIaJZRUGFMfOQv6VnAkvOjt7xXDO9h0_39kkcXtLXRdau8gxanatQ/exec ",
+  GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycby-CCVNdzSYRrG9BBbc3AflAVvtTpKmlitmJAXsK-GzUqVur5xZxQxvWK0_1qGTPAMi5Q/exec",
   
   RETURN_URL: window.location.href.split('?')[0],
   DEBUG: true  // ✅ True rakho testing ke liye
