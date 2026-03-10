@@ -614,9 +614,29 @@ function showSuccess(data, formType) {
   $('paidForm')?.classList.add('hidden-form');
 
   const successMsg = $('successMsg');
-  if (successMsg) {
-    successMsg.classList.remove('hidden');
+  if (!successMsg) return;
 
+  successMsg.classList.remove('hidden');
+
+  // ✅ FEEDBACK ke liye - ONLY Minimal Message
+  if (formType === 'feedback') {
+    successMsg.innerHTML = `
+      <div class="success-icon" style="font-size:4rem;color:var(--success);margin-bottom:15px">
+        <i class="fas fa-check-circle"></i>
+      </div>
+      <h2 id="successTitle" style="margin:10px 0;color:var(--text)">✅ Feedback Submitted!</h2>
+      <p style="color:var(--muted);margin:15px 0;font-size:1.1rem">
+        Thank you for sharing your valuable feedback! 🙏
+      </p>
+      <button type="button" onclick="resetAll()" class="btn-primary" style="margin-top:25px">
+        <i class="fas fa-home"></i> Back to Home
+      </button>
+    `;
+    debug('🎉 Minimal success screen for feedback');
+    
+  } 
+  // ✅ PAID/AUDIT ke liye - Full Receipt (unchanged)
+  else {
     const mappings = {
       sName: data.name,
       sEmail: data.email,
@@ -625,7 +645,7 @@ function showSuccess(data, formType) {
         year: 'numeric', month: 'short', day: 'numeric',
         hour: '2-digit', minute: '2-digit'
       }),
-      sType: formType === 'paid' ? 'Audit Registration' : 'Free Feedback',
+      sType: 'Audit Registration',
       sStatus: 'Completed'
     };
 
@@ -636,7 +656,7 @@ function showSuccess(data, formType) {
 
     const paymentIdRow = $('paymentIdRow');
     const sPaymentId = $('sPaymentId');
-    if (formType === 'paid' && data.razorpay_payment_id && data.razorpay_payment_id !== 'N/A') {
+    if (data.razorpay_payment_id && data.razorpay_payment_id !== 'N/A') {
       if (paymentIdRow) paymentIdRow.style.display = 'flex';
       if (sPaymentId) sPaymentId.textContent = data.razorpay_payment_id;
     } else {
@@ -645,12 +665,14 @@ function showSuccess(data, formType) {
 
     const successTitle = $('successTitle');
     if (successTitle) {
-      successTitle.textContent = formType === 'paid'
-        ? '✅ Registration Successful!'
-        : '✅ Feedback Submitted!';
+      successTitle.textContent = '✅ Registration Successful!';
     }
 
-    debug(`🎉 Success screen displayed for ${formType}`);
+    // Print button sirf paid ke liye
+    const printBtn = successMsg.querySelector('.btn-outline');
+    if (printBtn) printBtn.style.display = 'inline-flex';
+
+    debug('🎉 Full success screen for paid registration');
   }
 
   currentView = 'success';
