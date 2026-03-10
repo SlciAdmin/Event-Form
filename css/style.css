@@ -29,10 +29,11 @@
 html {
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
+    scroll-padding-top: 20px;
 }
 
 body {
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-family: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', sans-serif;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
     min-height: 100vh;
     display: flex;
@@ -43,6 +44,7 @@ body {
     color: var(--dark);
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 /* ===== CONTAINER ===== */
@@ -100,6 +102,11 @@ body {
 .toggle-btn:hover:not(.active) {
     background: white;
     color: var(--primary);
+}
+
+.toggle-btn:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
 }
 
 .toggle-btn i {
@@ -208,6 +215,17 @@ input:invalid:not(:placeholder-shown) {
     border-color: var(--danger);
 }
 
+input[aria-invalid="true"], textarea[aria-invalid="true"] {
+    border-color: var(--danger);
+    animation: shake 0.3s ease;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
 textarea {
     resize: vertical;
     min-height: 65px;
@@ -227,6 +245,7 @@ select {
     display: flex;
     gap: 16px;
     padding: 4px 0;
+    flex-wrap: wrap;
 }
 
 .radio-option {
@@ -240,6 +259,7 @@ select {
 .radio-option input {
     width: auto;
     cursor: pointer;
+    accent-color: var(--primary);
 }
 
 /* ===== STAR RATING ===== */
@@ -249,6 +269,9 @@ select {
     justify-content: flex-end;
     gap: 4px;
     padding: 4px 0;
+    border: 2px solid transparent;
+    border-radius: var(--radius-sm);
+    transition: border-color 0.2s;
 }
 
 .star-rating input {
@@ -607,6 +630,8 @@ footer {
 }
 
 /* ===== RESPONSIVE DESIGN ===== */
+
+/* Tablet (768px and below) */
 @media (max-width: 768px) {
     .container { padding: 22px; margin: 12px; }
     .form-header h2 { font-size: 1.3rem; }
@@ -615,6 +640,7 @@ footer {
     .price .amount { font-size: 1.7rem; }
 }
 
+/* Mobile (500px and below) */
 @media (max-width: 500px) {
     body { padding: 10px; }
     .container { padding: 18px; margin: 8px; border-radius: 14px; }
@@ -622,7 +648,10 @@ footer {
     .form-header h2 { font-size: 1.2rem; }
     .form-row { grid-template-columns: 1fr; gap: 10px; }
     label { font-size: 0.85rem; }
-    input, select, textarea { padding: 11px 12px; font-size: 1rem; }
+    input, select, textarea { 
+        padding: 11px 12px; 
+        font-size: 16px; /* Prevent iOS zoom */
+    }
     .star-rating { justify-content: center; gap: 2px; }
     .star-rating label { font-size: 2rem; padding: 6px; }
     .payment-card { padding: 16px; margin: 14px 0; }
@@ -638,6 +667,7 @@ footer {
     .radio-group { flex-wrap: wrap; gap: 10px; }
 }
 
+/* Small Mobile (360px and below) */
 @media (max-width: 360px) {
     .container { padding: 16px; }
     .form-header h2 { font-size: 1.15rem; }
@@ -645,40 +675,98 @@ footer {
     .star-rating label { font-size: 1.8rem; }
 }
 
+/* Landscape mobile */
 @media (max-height: 500px) and (orientation: landscape) {
-    body { padding: 8px; align-items: flex-start; padding-top: 20px; }
-    .container { margin: 0 auto; max-height: 90vh; overflow-y: auto; }
+    body { 
+        padding: 8px; 
+        align-items: flex-start; 
+        padding-top: 20px; 
+    }
+    .container { 
+        margin: 0 auto; 
+        max-height: 90vh; 
+        overflow-y: auto; 
+    }
 }
 
 /* ===== PRINT STYLES ===== */
 @media print {
-    body { background: white; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .container { box-shadow: none; max-width: 100%; padding: 15px; border: 1px solid #ddd; }
-    .form-toggle-header, .payment-card, .btn-primary, .btn-success, .btn-outline, footer, .form-row, .field:not(.full) { display: none; }
+    body { 
+        background: white; 
+        padding: 0; 
+        -webkit-print-color-adjust: exact; 
+        print-color-adjust: exact; 
+    }
+    .container { 
+        box-shadow: none; 
+        max-width: 100%; 
+        padding: 15px; 
+        border: 1px solid #ddd; 
+    }
+    .form-toggle-header, 
+    .payment-card, 
+    .btn-primary, 
+    .btn-success, 
+    .btn-outline, 
+    footer, 
+    .form-row, 
+    .field:not(.full) { 
+        display: none; 
+    }
     .success { padding: 10px; }
-    .receipt { border: 1px solid #ddd; box-shadow: none; }
+    .receipt { 
+        border: 1px solid #ddd; 
+        box-shadow: none; 
+    }
     .toast, .loader { display: none !important; }
 }
 
 /* ===== DARK MODE SUPPORT ===== */
 @media (prefers-color-scheme: dark) {
-    body { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); }
-    .container { background: #1e1e2f; color: #f0f0f0; }
+    body { 
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); 
+    }
+    .container { 
+        background: #1e1e2f; 
+        color: #f0f0f0; 
+    }
     .form-toggle-header { background: #2a2a3e; }
     .toggle-btn { color: #aaa; }
-    .toggle-btn.active { background: linear-gradient(135deg, #8892ff, #667eea); }
-    .toggle-btn:hover:not(.active) { background: #333; color: #8892ff; }
-    .section-title { border-bottom-color: #333; color: #f0f0f0; }
+    .toggle-btn.active { 
+        background: linear-gradient(135deg, #8892ff, #667eea); 
+    }
+    .toggle-btn:hover:not(.active) { 
+        background: #333; 
+        color: #8892ff; 
+    }
+    .section-title { 
+        border-bottom-color: #333; 
+        color: #f0f0f0; 
+    }
     label { color: #f0f0f0; }
-    input, select, textarea { background: #2a2a3e; border-color: #444; color: #f0f0f0; }
-    input:focus, select:focus, textarea:focus { background: #333; border-color: #8892ff; }
-    .payment-card { background: linear-gradient(135deg, #252540, #2a2a45); border-color: #8892ff; }
+    input, select, textarea { 
+        background: #2a2a3e; 
+        border-color: #444; 
+        color: #f0f0f0; 
+    }
+    input:focus, select:focus, textarea:focus { 
+        background: #333; 
+        border-color: #8892ff; 
+    }
+    .payment-card { 
+        background: linear-gradient(135deg, #252540, #2a2a45); 
+        border-color: #8892ff; 
+    }
     .status { color: #ccc; }
-    .toast { background: #2a2a3e; color: #f0f0f0; }
+    .toast { 
+        background: #2a2a3e; 
+        color: #f0f0f0; 
+    }
     .receipt { background: #252540; }
     .loader { background: rgba(30, 30, 47, 0.96); }
 }
 
+/* ===== REDUCED MOTION ===== */
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
         animation-duration: 0.01ms !important;
@@ -686,4 +774,71 @@ footer {
         transition-duration: 0.01ms !important;
     }
     html { scroll-behavior: auto; }
+}
+
+/* ===== HIGH CONTRAST MODE ===== */
+@media (prefers-contrast: high) {
+    :root {
+        --border: #000;
+        --gray: #333;
+    }
+    input, select, textarea {
+        border-width: 3px;
+    }
+    .toggle-btn.active {
+        border: 2px solid #000;
+    }
+}
+
+/* ===== iOS SPECIFIC FIXES ===== */
+@supports (-webkit-touch-callout: none) {
+    input, select, textarea {
+        font-size: 16px; /* Prevent zoom on focus */
+    }
+    .container {
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* ===== ANDROID CHROME FIXES ===== */
+/* ===== NUMBER INPUT SPIN BUTTON FIXES (Cross-Browser) ===== */
+
+/* Standard + WebKit + Firefox compatibility */
+input[type="tel"],
+input[type="number"] {
+    /* Standard property (future-proof) */
+    appearance: textfield;
+    
+    /* Firefox */
+    -moz-appearance: textfield;
+    
+    /* Chrome, Safari, Edge, Opera */
+    -webkit-appearance: none;
+}
+
+/* Remove spin buttons in WebKit browsers */
+input[type="tel"]::-webkit-outer-spin-button,
+input[type="tel"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* ===== FEATURE-QUERY VERSION (Optional - for progressive enhancement) ===== */
+@supports (-webkit-appearance: none) or (appearance: textfield) {
+    input[type="tel"],
+    input[type="number"] {
+        appearance: textfield;
+        -moz-appearance: textfield;
+        -webkit-appearance: none;
+    }
+    
+    input[type="tel"]::-webkit-outer-spin-button,
+    input[type="tel"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
 }

@@ -1,14 +1,20 @@
+/**
+ * Event Registration System - Dual Form (Feedback + Paid)
+ * Production Ready • Responsive • Accessible
+ */
+
 const CONFIG = {
     PAYMENT_LINK: "https://rzp.io/rzp/5NCrTAI",
     AMOUNT: 100,
     CURRENCY: "INR",
     GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbxR8886dsk6fB3xCKKWFjJSy5y5pJjHN6TLaynY06URgzuJyTO4QFOPhSB3bAwBjciw/exec",
-    RETURN_URL: window.location.href.split('?')[0]
+    RETURN_URL: window.location.href.split('?')[0],
+    DEBUG: false
 };
 
-// ===== STATE =====
+// ===== STATE MANAGEMENT =====
 let paymentDone = false;
-let currentFormType = 'feedback'; // 'feedback' or 'paid'
+let currentFormType = 'feedback';
 let paymentData = {
     razorpay_payment_id: "",
     razorpay_order_id: "",
@@ -16,16 +22,18 @@ let paymentData = {
     payment_link_id: "IRE79PZ"
 };
 
-// ===== DOM SHORTCUTS =====
+// ===== DOM HELPERS =====
 const $ = id => document.getElementById(id);
 const $$ = (sel, ctx = document) => ctx.querySelectorAll(sel);
 
-// ===== DEBUG HELPER =====
+// ===== DEBUG LOGGER =====
 function debug(msg, data = null) {
-    console.log(`[💳 DEBUG] ${msg}`, data || '');
+    if (CONFIG.DEBUG) {
+        console.log(`[💳 ${new Date().toLocaleTimeString()}] ${msg}`, data || '');
+    }
 }
 
-// ===== FORM TOGGLE LOGIC =====
+// ===== FORM TOGGLE SYSTEM =====
 function initFormToggle() {
     const feedbackBtn = $('showFeedbackBtn');
     const paidBtn = $('showPaidBtn');
@@ -33,47 +41,61 @@ function initFormToggle() {
     const paidForm = $('paidForm');
 
     function switchForm(targetForm) {
+        if (currentFormType === targetForm) return;
+        
         currentFormType = targetForm;
         
-        // Update buttons
-        if (targetForm === 'feedback') {
-            feedbackBtn.classList.add('active');
-            feedbackBtn.setAttribute('aria-pressed', 'true');
-            paidBtn.classList.remove('active');
-            paidBtn.setAttribute('aria-pressed', 'false');
-            feedbackForm.classList.remove('hidden-form');
-            feedbackForm.classList.add('active-form');
-            paidForm.classList.add('hidden-form');
-            paidForm.classList.remove('active-form');
-            debug('📋 Switched to Feedback Form');
-        } else {
-            paidBtn.classList.add('active');
-            paidBtn.setAttribute('aria-pressed', 'true');
-            feedbackBtn.classList.remove('active');
-            feedbackBtn.setAttribute('aria-pressed', 'false');
-            paidForm.classList.remove('hidden-form');
-            paidForm.classList.add('active-form');
-            feedbackForm.classList.add('hidden-form');
-            feedbackForm.classList.remove('active-form');
-            debug('💳 Switched to Paid Registration Form');
+        // Update toggle buttons
+        [feedbackBtn, paidBtn].forEach(btn => {
+            if (btn) {
+                const isActive = btn.id === `show${targetForm === 'feedback' ? 'Feedback' : 'Paid'}Btn`;
+                btn.classList.toggle('active', isActive);
+                btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            }
+        });
+        
+        // Show/hide forms with animation
+        if (feedbackForm && paidForm) {
+            if (targetForm === 'feedback') {
+                feedbackForm.classList.remove('hidden-form');
+                feedbackForm.classList.add('active-form');
+                paidForm.classList.add('hidden-form');
+                paidForm.classList.remove('active-form');
+                debug('📋 Feedback Form activated');
+            } else {
+                paidForm.classList.remove('hidden-form');
+                paidForm.classList.add('active-form');
+                feedbackForm.classList.add('hidden-form');
+                feedbackForm.classList.remove('active-form');
+                debug('💳 Paid Form activated');
+            }
         }
         
-        // Scroll to top
+        // Smooth scroll to top
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    if (feedbackBtn) feedbackBtn.addEventListener('click', () => switchForm('feedback'));
-    if (paidBtn) paidBtn.addEventListener('click', () => switchForm('paid'));
+    // Event listeners
+    if (feedbackBtn) feedbackBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        switchForm('feedback');
+    });
+    
+    if (paidBtn) paidBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        switchForm('paid');
+    });
     
     // Default: Show Feedback Form
     switchForm('feedback');
+    debug('🚀 Form toggle initialized');
 }
 
-// ===== HANDLE PAYMENT RETURN (Paid Form Only) =====
+// ===== PAYMENT RETURN HANDLER (Paid Form Only) =====
 function handlePaymentReturn() {
     if (currentFormType !== 'paid') return false;
     
-    debug('Checking payment return params...');
+    debug('🔍 Checking payment return parameters...');
     
     const urlParams = new URLSearchParams(window.location.search);
     const paymentId = urlParams.get('razorpay_payment_id');
@@ -81,6 +103,7 @@ function handlePaymentReturn() {
     const orderId = urlParams.get('razorpay_order_id');
     const error = urlParams.get('razorpay_error');
     
+    // ✅ Payment Successful
     if (paymentId && status === 'captured') {
         debug('✅ Payment captured!', { paymentId, orderId });
         
@@ -88,21 +111,38 @@ function handlePaymentReturn() {
         paymentData.razorpay_payment_id = paymentId;
         paymentData.razorpay_order_id = orderId || 'N/A';
         
-        sessionStorage.setItem('paymentData', JSON.stringify(paymentData));
+        // Save to session
+        try {
+            sessionStorage.setItem('paymentData', JSON.stringify(paymentData));
+        } catch (e) {
+            debug('⚠️ Session storage failed', e);
+        }
         
+        // Clean URL without reload
         if (window.history.replaceState) {
             window.history.replaceState({}, document.title, CONFIG.RETURN_URL);
         }
         
+        // Update UI & enable submit
         updatePaymentUI(true);
-        $('submitBtn') && ($('submitBtn').disabled = false);
+        const submitBtn = $('submitBtn');
+        if (submitBtn) submitBtn.disabled = false;
+        
+        // Auto-submit after successful payment
+        setTimeout(() => {
+            if (validatePaidForm()) {
+                debug('🔄 Auto-submitting paid form after payment...');
+                handlePaidSubmit(null, true);
+            }
+        }, 500);
         
         return true;
     }
     
+    // ❌ Payment Failed/Cancelled
     if (error || (status && status !== 'captured')) {
         debug('❌ Payment failed/cancelled', { error, status });
-        showToast(`⚠️ Payment ${error ? 'Failed' : 'Cancelled'}. Try again.`, 'warning');
+        showToast(`⚠️ Payment ${error ? 'Failed' : 'Cancelled'}. Please try again.`, 'warning');
         resetPaymentUI();
         
         if (window.history.replaceState) {
@@ -111,111 +151,134 @@ function handlePaymentReturn() {
         return false;
     }
     
-    debug('ℹ️ No payment params in URL');
+    debug('ℹ️ No payment parameters in URL');
     return false;
 }
 
 // ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
-    debug('🚀 DOM Loaded');
+    debug('🚀 DOM Content Loaded');
     
-    // Initialize form toggle FIRST
+    // 1. Initialize form toggle
     initFormToggle();
     
-    // Initialize forms based on type
+    // 2. Initialize both forms
     initFeedbackForm();
     initPaidForm();
     
-    // Handle page cache
+    // 3. Handle browser back/forward cache
     window.addEventListener('pageshow', (event) => {
         if (event.persisted) {
-            debug('♻️ Page restored from cache');
+            debug('♻️ Page restored from bfcache');
             if (currentFormType === 'paid' && !paymentDone && !sessionStorage.getItem('paymentData')) {
                 window.location.reload();
             }
         }
     });
+    
+    // 4. Prevent form resubmission on refresh
+    if (window.performance?.navigation?.type === 2) {
+        debug('🔄 Page loaded via back/forward - resetting');
+        resetAll();
+    }
 });
 
-// ===== FEEDBACK FORM INIT =====
+// ===== FEEDBACK FORM INITIALIZATION =====
 function initFeedbackForm() {
     const form = $('feedbackForm');
     if (!form) return;
     
-    // Star rating for feedback
+    // Initialize star rating
     initStarRating('fb_starRating');
     
-    // Real-time validation
-    ['fb_name', 'fb_email', 'fb_phone', 'fb_city'].forEach(id => {
+    // Real-time validation on blur/input
+    ['fb_name', 'fb_email', 'fb_phone', 'fb_city', 'fb_learned'].forEach(id => {
         const field = $(id);
         if (field) {
-            field.addEventListener('blur', () => validateFeedbackField(field));
+            field.addEventListener('blur', () => validateField(field, 'feedback'));
             field.addEventListener('input', () => {
-                if (field.style.borderColor === 'rgb(231, 76, 60)') {
+                if (field.style.borderColor === 'var(--danger)') {
                     field.style.borderColor = '';
+                    field.removeAttribute('aria-invalid');
                 }
             });
         }
     });
     
-    // Form submit
-    form.addEventListener('submit', handleFeedbackSubmit);
+    // Form submission
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        handleFeedbackSubmit();
+    });
     
     debug('✅ Feedback Form initialized');
 }
 
-// ===== PAID FORM INIT =====
+// ===== PAID FORM INITIALIZATION =====
 function initPaidForm() {
     const form = $('paidForm');
     if (!form) return;
     
-    // Check payment return
+    // Check for payment return parameters
     handlePaymentReturn();
     
-    // Restore from session
+    // Restore payment state from session
     const savedPayment = sessionStorage.getItem('paymentData');
     if (savedPayment && currentFormType === 'paid') {
-        debug('🔄 Restoring payment from session');
-        paymentData = JSON.parse(savedPayment);
-        if (paymentData.razorpay_payment_id) {
-            paymentDone = true;
-            updatePaymentUI(true);
-            $('submitBtn') && ($('submitBtn').disabled = false);
+        try {
+            paymentData = JSON.parse(savedPayment);
+            if (paymentData.razorpay_payment_id) {
+                paymentDone = true;
+                updatePaymentUI(true);
+                const submitBtn = $('submitBtn');
+                if (submitBtn) submitBtn.disabled = false;
+                debug('🔄 Payment state restored from session');
+            }
+        } catch (e) {
+            debug('⚠️ Failed to parse saved payment data', e);
         }
     }
     
-    // Star rating not needed for paid form (removed)
-    
-    // Pay button click
+    // Pay button click handler
     const payBtn = $('payBtn');
     if (payBtn) {
-        payBtn.addEventListener('click', function(e) {
+        payBtn.addEventListener('click', (e) => {
+            // Validate before redirect
             if (!validatePaidForm()) {
                 e.preventDefault();
-                showToast('Please fill all required fields', 'error');
+                showToast('Please fill all required fields before payment', 'error');
                 return false;
             }
             
-            // Save form data before redirect
-            const formData = collectPaidFormData();
-            sessionStorage.setItem('tempPaidData', JSON.stringify(formData));
+            // Save form data for post-payment submission
+            try {
+                const formData = collectPaidFormData();
+                sessionStorage.setItem('tempPaidData', JSON.stringify(formData));
+                debug('💾 Form data saved for post-payment submission');
+            } catch (err) {
+                debug('⚠️ Failed to save temp data', err);
+            }
             
-            debug('🔗 Redirecting to Razorpay...');
-            return true;
+            debug('🔗 Redirecting to Razorpay payment link...');
+            return true; // Allow default anchor redirect
         });
     }
     
-    // Form submit
-    form.addEventListener('submit', handlePaidSubmit);
+    // Form submission (after payment)
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        handlePaidSubmit();
+    });
     
     // Real-time validation
     ['name', 'email', 'phone', 'city'].forEach(id => {
         const field = $(id);
         if (field) {
-            field.addEventListener('blur', () => validatePaidField(field));
+            field.addEventListener('blur', () => validateField(field, 'paid'));
             field.addEventListener('input', () => {
-                if (field.style.borderColor === 'rgb(231, 76, 60)') {
+                if (field.style.borderColor === 'var(--danger)') {
                     field.style.borderColor = '';
+                    field.removeAttribute('aria-invalid');
                 }
             });
         }
@@ -224,163 +287,160 @@ function initPaidForm() {
     debug('✅ Paid Form initialized');
 }
 
-// ===== FEEDBACK FORM VALIDATION =====
-function validateFeedbackForm() {
-    const required = ['fb_name', 'fb_designation', 'fb_company', 'fb_phone', 'fb_email', 'fb_city', 'fb_learned', 'fb_recommend'];
+// ===== VALIDATION FUNCTIONS =====
+function validateField(field, formType) {
+    if (!field) return false;
+    
+    const value = field.value.trim();
     let isValid = true;
     
-    required.forEach(id => {
-        const field = $(id);
-        if (!field || !field.value.trim()) {
-            if (field) markInvalid(field);
-            isValid = false;
-        }
-    });
-    
-    // Rating required
-    const rating = document.querySelector('input[name="fb_rating"]:checked');
-    if (!rating) {
-        showToast('Please select a session rating', 'error');
+    // Required field check
+    if (field.required && !value) {
+        markInvalid(field);
         isValid = false;
     }
     
     // Email validation
-    const email = $('fb_email')?.value.trim();
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        markInvalid($('fb_email'));
+    if (field.type === 'email' && value) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(value)) {
+            markInvalid(field);
+            showToast('Please enter a valid email address', 'error');
+            isValid = false;
+        }
+    }
+    
+    // Phone validation (Indian mobile)
+    if (field.type === 'tel' && value) {
+        const phoneRegex = /^[6-9][0-9]{9}$/;
+        if (!phoneRegex.test(value)) {
+            markInvalid(field);
+            showToast('Please enter a valid 10-digit mobile number', 'error');
+            isValid = false;
+        }
+    }
+    
+    // Pattern validation
+    if (field.pattern && value && !new RegExp(field.pattern).test(value)) {
+        markInvalid(field);
         isValid = false;
     }
     
-    // Phone validation
-    const phone = $('fb_phone')?.value.trim();
-    if (phone && !/^[6-9]\d{9}$/.test(phone)) {
-        markInvalid($('fb_phone'));
+    // Min length for textarea
+    if (field.tagName === 'TEXTAREA' && field.minLength && value.length < field.minLength) {
+        markInvalid(field);
+        showToast(`Please enter at least ${field.minLength} characters`, 'error');
         isValid = false;
+    }
+    
+    if (isValid) {
+        field.style.borderColor = '';
+        field.removeAttribute('aria-invalid');
     }
     
     return isValid;
 }
 
-function validateFeedbackField(field) {
-    if (!field) return false;
-    
-    if (!field.value.trim() && field.required) {
-        markInvalid(field);
-        return false;
-    }
-    
-    if (field.type === 'email' && field.value) {
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field.value)) {
-            markInvalid(field);
-            return false;
-        }
-    }
-    
-    if (field.type === 'tel' && field.value) {
-        if (!/^[6-9]\d{9}$/.test(field.value)) {
-            markInvalid(field);
-            return false;
-        }
-    }
-    
-    field.style.borderColor = '';
-    return true;
-}
-
-// ===== PAID FORM VALIDATION =====
-function validatePaidForm() {
-    const required = ['name', 'designation', 'company', 'phone', 'email', 'city'];
+function validateFeedbackForm() {
     let isValid = true;
     
-    required.forEach(id => {
+    // Required text fields
+    const requiredFields = ['fb_name', 'fb_designation', 'fb_company', 'fb_phone', 'fb_email', 'fb_city', 'fb_learned'];
+    requiredFields.forEach(id => {
         const field = $(id);
-        if (!field || !field.value.trim()) {
-            if (field) markInvalid(field);
+        if (field && !validateField(field, 'feedback')) {
             isValid = false;
         }
     });
     
-    const email = $('email')?.value.trim();
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        markInvalid($('email'));
+    // Star rating required
+    const rating = document.querySelector('input[name="fb_rating"]:checked');
+    if (!rating) {
+        showToast('Please select a session rating', 'error');
+        const ratingContainer = $('fb_starRating');
+        if (ratingContainer) ratingContainer.style.borderColor = 'var(--danger)';
         isValid = false;
+    } else {
+        const ratingContainer = $('fb_starRating');
+        if (ratingContainer) ratingContainer.style.borderColor = '';
     }
     
-    const phone = $('phone')?.value.trim();
-    if (phone && !/^[6-9]\d{9}$/.test(phone)) {
-        markInvalid($('phone'));
+    // Recommendation radio required
+    const recommend = document.querySelector('input[name="fb_recommend"]:checked');
+    if (!recommend) {
+        showToast('Please select if you would recommend this session', 'error');
         isValid = false;
     }
     
     return isValid;
 }
 
-function validatePaidField(field) {
-    if (!field) return false;
+function validatePaidForm() {
+    let isValid = true;
     
-    if (!field.value.trim() && field.required) {
-        markInvalid(field);
-        return false;
-    }
-    
-    if (field.type === 'email' && field.value) {
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field.value)) {
-            markInvalid(field);
-            return false;
+    // Required fields
+    const requiredFields = ['name', 'designation', 'company', 'phone', 'email', 'city'];
+    requiredFields.forEach(id => {
+        const field = $(id);
+        if (field && !validateField(field, 'paid')) {
+            isValid = false;
         }
-    }
+    });
     
-    if (field.type === 'tel' && field.value) {
-        if (!/^[6-9]\d{9}$/.test(field.value)) {
-            markInvalid(field);
-            return false;
-        }
-    }
-    
-    field.style.borderColor = '';
-    return true;
+    return isValid;
 }
 
 function markInvalid(field) {
     if (!field) return;
-    field.style.borderColor = 'var(--danger, #e74c3c)';
+    field.style.borderColor = 'var(--danger)';
     field.setAttribute('aria-invalid', 'true');
+    
+    // Shake animation for better UX
+    field.style.animation = 'none';
+    setTimeout(() => {
+        field.style.animation = 'shake 0.3s ease';
+    }, 10);
 }
 
 // ===== FEEDBACK FORM SUBMISSION =====
-async function handleFeedbackSubmit(e) {
-    if (e) e.preventDefault();
+async function handleFeedbackSubmit() {
+    debug('📤 Feedback form submission triggered');
     
-    debug('📤 Feedback Form submit triggered');
-    
+    // Validate first
     if (!validateFeedbackForm()) {
-        showToast('Please fill all required fields', 'error');
+        showToast('Please fill all required fields correctly', 'error');
+        // Focus first invalid field
+        const firstInvalid = document.querySelector('#feedbackForm [aria-invalid="true"]');
+        if (firstInvalid) firstInvalid.focus();
         return;
     }
     
-    const loader = $('loader');
-    loader?.classList.remove('hidden');
-    $('loaderText').textContent = 'Submitting Feedback...';
+    // Show loader
+    showLoader('Submitting Feedback...');
     
     try {
         const data = collectFeedbackData();
-        debug('📦 Submitting feedback:', data);
+        debug('📦 Feedback data collected', data);
         
+        // Submit to Google Sheets
         await submitToGoogleSheets(data, 'feedback');
+        
+        // Show success
         showSuccess(data, 'feedback');
         
-        // Reset after 3 seconds
+        // Auto-reset after 3 seconds
         setTimeout(() => {
             debug('🔄 Auto-resetting feedback form');
             resetFeedbackForm();
         }, 3000);
         
     } catch (error) {
-        console.error('Feedback submit error:', error);
-        showToast('⚠️ Feedback saved but confirmation pending', 'warning');
-        showSuccess(collectFeedbackData(), 'feedback');
+        console.error('Feedback submission error:', error);
+        showToast('⚠️ Feedback saved locally. Confirmation pending.', 'warning');
+        const data = collectFeedbackData();
+        showSuccess(data, 'feedback');
     } finally {
-        $('loader')?.classList.add('hidden');
+        hideLoader();
     }
 }
 
@@ -406,13 +466,15 @@ function collectFeedbackData() {
         suggestions: $('fb_suggestions')?.value.trim() || 'None',
         remarks: $('fb_remarks')?.value.trim() || 'None',
         
-        // Meta
+        // Metadata
         form_type: 'feedback',
         payment_status: 'Not Applicable',
         amount: '₹0.00',
         payment_method: 'None',
         razorpay_payment_id: 'N/A',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        user_agent: navigator.userAgent,
+        screen_resolution: `${screen.width}x${screen.height}`
     };
 }
 
@@ -420,80 +482,99 @@ function resetFeedbackForm() {
     const form = $('feedbackForm');
     if (!form) return;
     
-    form.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], textarea').forEach(input => {
-        input.value = '';
-        input.style.borderColor = '';
-        input.removeAttribute('aria-invalid');
+    // Reset all inputs
+    form.querySelectorAll('input, textarea, select').forEach(el => {
+        if (el.type === 'radio' || el.type === 'checkbox') {
+            el.checked = false;
+        } else if (el.tagName === 'SELECT') {
+            el.selectedIndex = 0;
+        } else {
+            el.value = '';
+        }
+        el.style.borderColor = '';
+        el.removeAttribute('aria-invalid');
     });
     
-    form.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
-    form.querySelectorAll('input[type="radio"]').forEach(radio => radio.checked = false);
+    // Reset star rating border
+    const ratingContainer = $('fb_starRating');
+    if (ratingContainer) ratingContainer.style.borderColor = '';
     
-    debug('✅ Feedback form reset');
+    debug('✅ Feedback form reset complete');
 }
 
 // ===== PAID FORM SUBMISSION =====
-async function handlePaidSubmit(e) {
+async function handlePaidSubmit(e = null, autoSubmit = false) {
     if (e) e.preventDefault();
     
-    debug('📤 Paid Form submit triggered');
+    debug('📤 Paid form submission triggered', { autoSubmit });
     
+    // Check payment status
     if (!paymentDone) {
-        debug('❌ Payment not done');
-        showToast('⚠️ Please complete payment first', 'error');
-        $('payBtn')?.scrollIntoView({ behavior: 'smooth' });
+        debug('❌ Payment not completed');
+        showToast('⚠️ Please complete the payment first', 'error');
+        $('payBtn')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
     }
     
+    // Validate form
     if (!validatePaidForm()) {
-        showToast('Please fill all required fields', 'error');
+        showToast('Please fill all required fields correctly', 'error');
+        const firstInvalid = document.querySelector('#paidForm [aria-invalid="true"]');
+        if (firstInvalid) firstInvalid.focus();
         return;
     }
     
-    // Get payment data
+    // Ensure payment data is available
     if (!paymentData.razorpay_payment_id) {
-        const saved = sessionStorage.getItem('paymentData');
-        if (saved) {
-            paymentData = JSON.parse(saved);
+        try {
+            const saved = sessionStorage.getItem('paymentData');
+            if (saved) {
+                paymentData = JSON.parse(saved);
+            }
+        } catch (err) {
+            debug('⚠️ Failed to restore payment data', err);
         }
     }
     
     if (!paymentData.razorpay_payment_id) {
-        debug('❌ No payment ID found');
-        showToast('⚠️ Payment verification failed', 'error');
+        debug('❌ No payment ID available');
+        showToast('⚠️ Payment verification failed. Please try again.', 'error');
         resetPaidForm();
         return;
     }
     
-    const loader = $('loader');
-    loader?.classList.remove('hidden');
-    $('loaderText').textContent = 'Processing Registration...';
+    // Show loader
+    showLoader(autoSubmit ? 'Processing Payment...' : 'Processing Registration...');
     
     try {
         const data = collectPaidFormData();
-        debug('📦 Submitting paid registration:', data);
+        debug('📦 Paid registration data collected', data);
         
+        // Submit to Google Sheets
         await submitToGoogleSheets(data, 'paid');
+        
+        // Show success
         showSuccess(data, 'paid');
         
-        // Reset after 3 seconds
+        // Auto-reset after 3 seconds
         setTimeout(() => {
             debug('🔄 Auto-resetting paid form');
             resetPaidForm();
         }, 3000);
         
     } catch (error) {
-        console.error('Paid submit error:', error);
-        showToast('⚠️ Registration saved but confirmation pending', 'warning');
-        showSuccess(collectPaidFormData(), 'paid');
+        console.error('Paid submission error:', error);
+        showToast('⚠️ Registration saved. Confirmation email pending.', 'warning');
+        const data = collectPaidFormData();
+        showSuccess(data, 'paid');
     } finally {
-        $('loader')?.classList.add('hidden');
+        hideLoader();
     }
 }
 
 function collectPaidFormData() {
     return {
-        // User Details (same as feedback)
+        // User Details (same structure as feedback)
         name: $('name')?.value.trim() || '',
         designation: $('designation')?.value.trim() || '',
         company: $('company')?.value.trim() || '',
@@ -502,17 +583,24 @@ function collectPaidFormData() {
         email: $('email')?.value.trim() || '',
         city: $('city')?.value.trim() || '',
         
-        // Payment Info
+        // Payment-specific fields
         remarks: $('remarks')?.value.trim() || 'None',
         
-        // Meta
+        // Payment metadata
         form_type: 'paid_registration',
         payment_status: 'Paid',
         amount: '₹1.00',
         payment_method: 'Razorpay',
         razorpay_payment_id: paymentData.razorpay_payment_id || 'PENDING',
         razorpay_order_id: paymentData.razorpay_order_id || 'N/A',
-        timestamp: new Date().toISOString()
+        razorpay_signature: paymentData.razorpay_signature || 'N/A',
+        payment_link_id: paymentData.payment_link_id || 'IRE79PZ',
+        
+        // System metadata
+        timestamp: new Date().toISOString(),
+        user_agent: navigator.userAgent,
+        screen_resolution: `${screen.width}x${screen.height}`,
+        return_url: CONFIG.RETURN_URL
     };
 }
 
@@ -520,16 +608,23 @@ function resetPaidForm() {
     const form = $('paidForm');
     if (!form) return;
     
-    form.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], textarea').forEach(input => {
-        input.value = '';
-        input.style.borderColor = '';
-        input.removeAttribute('aria-invalid');
+    // Reset inputs
+    form.querySelectorAll('input, textarea, select').forEach(el => {
+        if (el.type === 'radio' || el.type === 'checkbox') {
+            el.checked = false;
+        } else if (el.tagName === 'SELECT') {
+            el.selectedIndex = 0;
+        } else {
+            el.value = '';
+        }
+        el.style.borderColor = '';
+        el.removeAttribute('aria-invalid');
     });
-    
-    form.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
     
     // Reset payment UI
     resetPaymentUI();
+    
+    // Reset state
     paymentDone = false;
     paymentData = {
         razorpay_payment_id: "",
@@ -537,63 +632,96 @@ function resetPaidForm() {
         razorpay_signature: "",
         payment_link_id: "IRE79PZ"
     };
-    sessionStorage.removeItem('paymentData');
     
-    debug('✅ Paid form reset');
+    // Clear session
+    try {
+        sessionStorage.removeItem('paymentData');
+        sessionStorage.removeItem('tempPaidData');
+    } catch (e) {
+        debug('⚠️ Session cleanup failed', e);
+    }
+    
+    debug('✅ Paid form reset complete');
 }
 
-// ===== GOOGLE SHEETS SUBMISSION =====
+// ===== GOOGLE SHEETS INTEGRATION =====
 async function submitToGoogleSheets(data, formType) {
+    // Demo mode check
     if (!CONFIG.GOOGLE_SCRIPT || CONFIG.GOOGLE_SCRIPT.includes('YOUR_')) {
-        debug('📋 Demo mode - Google Script not configured');
+        debug('📋 Demo mode: Google Script not configured');
         return true;
     }
     
     try {
-        await fetch(CONFIG.GOOGLE_SCRIPT, {
+        const response = await fetch(CONFIG.GOOGLE_SCRIPT, {
             method: 'POST',
-            mode: 'no-cors',
+            mode: 'no-cors', // Required for Google Apps Script
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
+        
         debug(`✅ ${formType} data sent to Google Sheets`);
         return true;
-    } catch (err) {
-        console.error('Google Sheets error:', err);
-        throw err;
+        
+    } catch (error) {
+        console.error(`Google Sheets error (${formType}):`, error);
+        // Don't throw - allow success screen to show even if Sheets fails
+        return false;
     }
 }
 
 // ===== SUCCESS SCREEN =====
 function showSuccess(data, formType) {
-    // Hide forms
+    // Hide both forms
     $('feedbackForm')?.classList.add('hidden-form');
     $('paidForm')?.classList.add('hidden-form');
     
-    // Show success
-    $('successMsg')?.classList.remove('hidden');
-    
-    // Update success content
-    $('sName') && ($('sName').textContent = data.name);
-    $('sEmail') && ($('sEmail').textContent = data.email);
-    $('sAmount') && ($('sAmount').textContent = data.amount);
-    $('sTime') && ($('sTime').textContent = new Date().toLocaleString('en-IN'));
-    $('sType') && ($('sType').textContent = formType === 'paid' ? 'Paid Registration' : 'Free Feedback');
-    
-    // Payment ID row
-    const paymentIdRow = $('paymentIdRow');
-    if (formType === 'paid' && data.razorpay_payment_id && data.razorpay_payment_id !== 'N/A') {
-        paymentIdRow && (paymentIdRow.style.display = 'flex');
-        $('sPaymentId') && ($('sPaymentId').textContent = data.razorpay_payment_id);
-    } else {
-        paymentIdRow && (paymentIdRow.style.display = 'none');
+    // Show success message
+    const successMsg = $('successMsg');
+    if (successMsg) {
+        successMsg.classList.remove('hidden');
+        
+        // Populate success data
+        const mappings = {
+            sName: data.name,
+            sEmail: data.email,
+            sAmount: data.amount,
+            sTime: new Date().toLocaleString('en-IN', {
+                year: 'numeric', month: 'short', day: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            }),
+            sType: formType === 'paid' ? 'Paid Registration' : 'Free Feedback',
+            sStatus: 'Completed'
+        };
+        
+        Object.entries(mappings).forEach(([id, value]) => {
+            const el = $(id);
+            if (el) el.textContent = value;
+        });
+        
+        // Show/hide payment ID row
+        const paymentIdRow = $('paymentIdRow');
+        const sPaymentId = $('sPaymentId');
+        if (formType === 'paid' && data.razorpay_payment_id && data.razorpay_payment_id !== 'N/A') {
+            if (paymentIdRow) paymentIdRow.style.display = 'flex';
+            if (sPaymentId) sPaymentId.textContent = data.razorpay_payment_id;
+        } else {
+            if (paymentIdRow) paymentIdRow.style.display = 'none';
+        }
+        
+        // Update title
+        const successTitle = $('successTitle');
+        if (successTitle) {
+            successTitle.textContent = formType === 'paid' 
+                ? '✅ Registration Successful!' 
+                : '✅ Feedback Submitted!';
+        }
+        
+        debug(`🎉 Success screen displayed for ${formType}`);
     }
     
-    // Update title
-    $('successTitle') && ($('successTitle').textContent = formType === 'paid' ? '✅ Registration Successful!' : '✅ Feedback Submitted!');
-    
+    // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    debug(`🎉 Success screen shown for ${formType}`);
 }
 
 // ===== PAYMENT UI UPDATES =====
@@ -605,6 +733,7 @@ function updatePaymentUI(paid) {
     if (!paymentStatus || !payBtn) return;
     
     if (paid) {
+        // Success state
         paymentStatus.innerHTML = '✅ Payment: <b style="color:var(--success)">Completed</b>';
         paymentStatus.classList.add('paid');
         
@@ -612,9 +741,14 @@ function updatePaymentUI(paid) {
         payBtn.style.background = 'linear-gradient(135deg, var(--success), var(--success-dark))';
         payBtn.style.pointerEvents = 'none';
         payBtn.setAttribute('aria-disabled', 'true');
+        payBtn.setAttribute('tabindex', '-1');
         
-        if (submitBtn) submitBtn.disabled = false;
-        debug('🎨 Paid UI updated: Paid state');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.focus();
+        }
+        
+        debug('🎨 Payment UI: Paid state');
     }
 }
 
@@ -625,6 +759,7 @@ function resetPaymentUI() {
     
     if (!paymentStatus || !payBtn) return;
     
+    // Reset to pending state
     paymentStatus.innerHTML = '⏳ Payment: <b>Pending</b>';
     paymentStatus.classList.remove('paid');
     
@@ -632,30 +767,120 @@ function resetPaymentUI() {
     payBtn.style.background = '';
     payBtn.style.pointerEvents = '';
     payBtn.removeAttribute('aria-disabled');
+    payBtn.removeAttribute('tabindex');
     
     if (submitBtn) submitBtn.disabled = true;
-    debug('🎨 Paid UI updated: Pending state');
+    
+    debug('🎨 Payment UI: Pending state');
 }
 
-// ===== STAR RATING (Generic) =====
+// ===== STAR RATING (Reusable) =====
 function initStarRating(containerId) {
     const container = $(containerId);
     if (!container) return;
     
-    const stars = container.querySelectorAll('label');
-    stars.forEach(label => {
-        label.addEventListener('click', function() {
-            const value = this.getAttribute('for').replace('fb_star', '').replace('star', '');
-            container.querySelectorAll('input').forEach(radio => {
-                radio.checked = (radio.value === value);
-            });
+    const labels = container.querySelectorAll('label');
+    
+    labels.forEach(label => {
+        label.addEventListener('click', function(e) {
+            e.preventDefault();
+            const inputId = this.getAttribute('for');
+            const input = document.getElementById(inputId);
+            
+            if (input) {
+                // Uncheck all in this group
+                container.querySelectorAll('input').forEach(radio => {
+                    radio.checked = false;
+                });
+                // Check selected
+                input.checked = true;
+                
+                // Visual feedback
+                container.style.borderColor = '';
+                
+                debug(`⭐ Rating selected: ${input.value}`);
+            }
+        });
+        
+        // Keyboard accessibility
+        label.setAttribute('tabindex', '0');
+        label.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                label.click();
+            }
         });
     });
 }
 
+// ===== LOADER UTILITIES =====
+function showLoader(text = 'Processing...') {
+    const loader = $('loader');
+    const loaderText = $('loaderText');
+    
+    if (loader) {
+        loader.classList.remove('hidden');
+        loader.setAttribute('aria-hidden', 'false');
+    }
+    if (loaderText) loaderText.textContent = text;
+    
+    // Prevent scrolling while loading
+    document.body.style.overflow = 'hidden';
+    
+    debug(`🔄 Loader shown: ${text}`);
+}
+
+function hideLoader() {
+    const loader = $('loader');
+    
+    if (loader) {
+        loader.classList.add('hidden');
+        loader.setAttribute('aria-hidden', 'true');
+    }
+    
+    // Restore scrolling
+    document.body.style.overflow = '';
+    
+    debug('🔄 Loader hidden');
+}
+
+// ===== TOAST NOTIFICATIONS =====
+function showToast(message, type = 'info') {
+    const toast = $('toast');
+    if (!toast) return;
+    
+    const icons = {
+        success: 'fa-check-circle',
+        error: 'fa-exclamation-circle',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-info-circle'
+    };
+    
+    // Clear existing timeout
+    if (toast._timeoutId) {
+        clearTimeout(toast._timeoutId);
+        delete toast._timeoutId;
+    }
+    
+    // Update content
+    toast.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i> ${message}`;
+    toast.className = `toast ${type}`;
+    toast.classList.remove('hidden');
+    
+    // Auto-hide after 3.5 seconds
+    toast._timeoutId = setTimeout(() => {
+        toast.classList.add('hidden');
+        delete toast._timeoutId;
+    }, 3500);
+    
+    debug(`🔔 Toast: [${type}] ${message}`);
+}
+
 // ===== GLOBAL RESET =====
 function resetAll() {
-    // Hide success
+    debug('🔄 Global reset triggered');
+    
+    // Hide success screen
     $('successMsg')?.classList.add('hidden');
     
     // Reset both forms
@@ -664,19 +889,23 @@ function resetAll() {
     
     // Show feedback form by default
     currentFormType = 'feedback';
+    
     const feedbackBtn = $('showFeedbackBtn');
     const paidBtn = $('showPaidBtn');
     const feedbackForm = $('feedbackForm');
     const paidForm = $('paidForm');
     
+    // Update toggle buttons
     if (feedbackBtn) {
         feedbackBtn.classList.add('active');
-        feedbackBtn.setAttribute('aria-pressed', 'true');
+        feedbackBtn.setAttribute('aria-selected', 'true');
     }
     if (paidBtn) {
         paidBtn.classList.remove('active');
-        paidBtn.setAttribute('aria-pressed', 'false');
+        paidBtn.setAttribute('aria-selected', 'false');
     }
+    
+    // Show/hide forms
     if (feedbackForm) {
         feedbackForm.classList.remove('hidden-form');
         feedbackForm.classList.add('active-form');
@@ -691,41 +920,68 @@ function resetAll() {
         window.history.replaceState({}, document.title, CONFIG.RETURN_URL);
     }
     
-    debug('🔄 All forms reset, showing Feedback Form');
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    debug('✅ Global reset complete - Feedback Form active');
 }
 
-// ===== UTILITIES =====
-function showToast(message, type = 'info') {
-    const toast = $('toast');
-    if (!toast) return;
-    
-    const icons = {
-        success: 'fa-check-circle',
-        error: 'fa-exclamation-circle',
-        warning: 'fa-exclamation-triangle',
-        info: 'fa-info-circle'
-    };
-    
-    toast.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i> ${message}`;
-    toast.className = `toast ${type}`;
-    toast.classList.remove('hidden');
-    
-    if (toast.timeoutId) clearTimeout(toast.timeoutId);
-    toast.timeoutId = setTimeout(() => {
-        toast.classList.add('hidden');
-    }, 3500);
-}
+// ===== EVENT LISTENERS =====
 
-// ===== BACK BUTTON HANDLER =====
+// Back button handler
 window.addEventListener('popstate', () => {
     if (!paymentDone && !window.location.search.includes('razorpay_')) {
-        debug('⬅️ Back button pressed - resetting');
+        debug('⬅️ Back navigation detected - resetting');
         resetAll();
     }
 });
 
-// ===== CLEANUP =====
+// Before unload cleanup
 window.addEventListener('beforeunload', () => {
-    sessionStorage.removeItem('tempFormData');
-    sessionStorage.removeItem('tempPaidData');
+    // Clear temporary data
+    try {
+        sessionStorage.removeItem('tempPaidData');
+    } catch (e) {
+        // Ignore quota errors
+    }
 });
+
+// Handle iOS input zoom prevention
+document.addEventListener('focusin', (e) => {
+    if (e.target.tagName === 'INPUT' && window.innerWidth < 500) {
+        // Prevent zoom on mobile when focusing inputs
+        const meta = document.querySelector('meta[name="viewport"]');
+        if (meta && !meta.content.includes('user-scalable=no')) {
+            meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+        }
+    }
+});
+
+// Handle form field enter key (prevent accidental submit)
+$$('input[type="text"], input[type="email"], input[type="tel"], textarea').forEach(field => {
+    field.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+            e.preventDefault();
+            // Move to next field or blur
+            const form = e.target.closest('form');
+            const fields = Array.from(form?.querySelectorAll('input, textarea, select') || []);
+            const currentIndex = fields.indexOf(e.target);
+            const nextField = fields[currentIndex + 1];
+            if (nextField) nextField.focus();
+            else e.target.blur();
+        }
+    });
+});
+
+// Initialize shake animation CSS (for validation feedback)
+const style = document.createElement('style');
+style.textContent = `
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+`;
+document.head.appendChild(style);
+
+debug('🎯 Event Registration System Ready');

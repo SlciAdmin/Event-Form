@@ -2,62 +2,54 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    
-    <!-- ✅ CRITICAL: Prevent caching -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, proxy-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
     <meta name="robots" content="noindex, nofollow" />
-    
-    <!-- ✅ Viewport -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-    
     <title>Event Registration | Feedback + ₹1 Payment</title>
-    
-    <!-- ✅ CSS Files -->
     <link rel="stylesheet" href="css/style.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
 </head>
 <body>
     <div class="container">
         <!-- Form Toggle Header -->
-        <div class="form-toggle-header">
-            <button type="button" id="showFeedbackBtn" class="toggle-btn active" aria-pressed="true">
+        <div class="form-toggle-header" role="tablist" aria-label="Form selection">
+            <button type="button" id="showFeedbackBtn" class="toggle-btn active" role="tab" aria-selected="true" aria-controls="feedbackForm">
                 <i class="fas fa-comment-alt"></i> Free Feedback
             </button>
-            <button type="button" id="showPaidBtn" class="toggle-btn" aria-pressed="false">
+            <button type="button" id="showPaidBtn" class="toggle-btn" role="tab" aria-selected="false" aria-controls="paidForm">
                 <i class="fas fa-rupee-sign"></i> Register & Pay ₹1
             </button>
         </div>
 
         <!-- ========== FEEDBACK FORM (DEFAULT) ========== -->
-        <form id="feedbackForm" class="active-form">
+        <form id="feedbackForm" class="active-form" novalidate>
             <div class="form-header">
                 <h2><i class="fas fa-comment-dots"></i> Session Feedback</h2>
                 <p class="form-subtitle">Share your experience • No payment required</p>
             </div>
 
-            <!-- User Details Section -->
             <div class="section-title"><i class="fas fa-user-circle"></i> Your Details</div>
             
             <div class="form-row">
                 <div class="field">
-                    <label><i class="fas fa-user"></i> Name <span class="req">*</span></label>
-                    <input type="text" id="fb_name" name="name" placeholder="Your Full Name" required autocomplete="name">
+                    <label for="fb_name"><i class="fas fa-user"></i> Name <span class="req">*</span></label>
+                    <input type="text" id="fb_name" name="name" placeholder="Your Full Name" required autocomplete="name" pattern="[\s\S]{2,100}">
                 </div>
                 <div class="field">
-                    <label><i class="fas fa-briefcase"></i> Designation <span class="req">*</span></label>
+                    <label for="fb_designation"><i class="fas fa-briefcase"></i> Designation <span class="req">*</span></label>
                     <input type="text" id="fb_designation" name="designation" placeholder="e.g., Manager" required autocomplete="organization-title">
                 </div>
             </div>
 
             <div class="form-row">
                 <div class="field">
-                    <label><i class="fas fa-building"></i> Company <span class="req">*</span></label>
+                    <label for="fb_company"><i class="fas fa-building"></i> Company <span class="req">*</span></label>
                     <input type="text" id="fb_company" name="company" placeholder="Your Company" required autocomplete="organization">
                 </div>
                 <div class="field">
-                    <label><i class="fas fa-users"></i> Employees</label>
+                    <label for="fb_employees"><i class="fas fa-users"></i> Employees</label>
                     <select id="fb_employees" name="employees" autocomplete="off">
                         <option value="">Select</option>
                         <option value="1-10">1-10</option>
@@ -70,23 +62,22 @@
 
             <div class="form-row">
                 <div class="field">
-                    <label><i class="fas fa-phone"></i> Contact <span class="req">*</span></label>
-                    <input type="tel" id="fb_phone" name="phone" placeholder="9876543210" pattern="[0-9]{10}" required autocomplete="tel">
+                    <label for="fb_phone"><i class="fas fa-phone"></i> Contact <span class="req">*</span></label>
+                    <input type="tel" id="fb_phone" name="phone" placeholder="9876543210" pattern="[6-9][0-9]{9}" required autocomplete="tel">
                 </div>
                 <div class="field">
-                    <label><i class="fas fa-envelope"></i> Email <span class="req">*</span></label>
+                    <label for="fb_email"><i class="fas fa-envelope"></i> Email <span class="req">*</span></label>
                     <input type="email" id="fb_email" name="email" placeholder="you@email.com" required autocomplete="email">
                 </div>
             </div>
 
             <div class="form-row">
-                <div class="field">
-                    <label><i class="fas fa-city"></i> City <span class="req">*</span></label>
+                <div class="field full">
+                    <label for="fb_city"><i class="fas fa-city"></i> City <span class="req">*</span></label>
                     <input type="text" id="fb_city" name="city" placeholder="Your City" required autocomplete="address-level2">
                 </div>
             </div>
 
-            <!-- Session Feedback Questions -->
             <div class="section-title"><i class="fas fa-clipboard-question"></i> Session Feedback</div>
             
             <div class="field full">
@@ -101,12 +92,12 @@
             </div>
 
             <div class="field full">
-                <label><i class="fas fa-lightbulb"></i> What did you learn from this session? <span class="req">*</span></label>
-                <textarea id="fb_learned" name="learned" rows="2" placeholder="Key takeaways..." required></textarea>
+                <label for="fb_learned"><i class="fas fa-lightbulb"></i> What did you learn? <span class="req">*</span></label>
+                <textarea id="fb_learned" name="learned" rows="2" placeholder="Key takeaways..." required minlength="10"></textarea>
             </div>
 
             <div class="field full">
-                <label><i class="fas fa-chalkboard-teacher"></i> How would you rate the speaker/presenter?</label>
+                <label for="fb_speaker_rating"><i class="fas fa-chalkboard-teacher"></i> Speaker Rating</label>
                 <select id="fb_speaker_rating" name="speaker_rating">
                     <option value="">Select Rating</option>
                     <option value="Excellent">Excellent</option>
@@ -118,8 +109,8 @@
             </div>
 
             <div class="field full">
-                <label><i class="fas fa-thumbs-up"></i> Would you recommend this session to others? <span class="req">*</span></label>
-                <div class="radio-group">
+                <label><i class="fas fa-thumbs-up"></i> Would you recommend? <span class="req">*</span></label>
+                <div class="radio-group" role="radiogroup" aria-label="Recommendation">
                     <label class="radio-option"><input type="radio" name="fb_recommend" value="Yes" required> Yes</label>
                     <label class="radio-option"><input type="radio" name="fb_recommend" value="Maybe"> Maybe</label>
                     <label class="radio-option"><input type="radio" name="fb_recommend" value="No"> No</label>
@@ -127,13 +118,13 @@
             </div>
 
             <div class="field full">
-                <label><i class="fas fa-comment-alt"></i> Any suggestions for improvement?</label>
+                <label for="fb_suggestions"><i class="fas fa-comment-alt"></i> Suggestions</label>
                 <textarea id="fb_suggestions" name="suggestions" rows="2" placeholder="Your valuable feedback..."></textarea>
             </div>
 
             <div class="field full">
-                <label><i class="fas fa-comment"></i> Additional Remarks</label>
-                <textarea id="fb_remarks" name="remarks" rows="2" placeholder="Anything else you'd like to share..."></textarea>
+                <label for="fb_remarks"><i class="fas fa-comment"></i> Additional Remarks</label>
+                <textarea id="fb_remarks" name="remarks" rows="2" placeholder="Anything else..."></textarea>
             </div>
 
             <button type="submit" id="fb_submitBtn" class="btn-success">
@@ -141,34 +132,33 @@
             </button>
         </form>
 
-        <!-- ========== PAID REGISTRATION FORM (HIDDEN BY DEFAULT) ========== -->
-        <form id="paidForm" class="hidden-form">
+        <!-- ========== PAID REGISTRATION FORM ========== -->
+        <form id="paidForm" class="hidden-form" novalidate>
             <div class="form-header">
                 <h2><i class="fas fa-ticket-alt"></i> Seminar Registration</h2>
                 <p class="form-subtitle">Secure Payment • ₹1 • Instant Confirmation</p>
             </div>
 
-            <!-- User Details Section (Same as Feedback) -->
             <div class="section-title"><i class="fas fa-user-circle"></i> Your Details</div>
             
             <div class="form-row">
                 <div class="field">
-                    <label><i class="fas fa-user"></i> Name <span class="req">*</span></label>
-                    <input type="text" id="name" name="name" placeholder="Your Full Name" required autocomplete="name">
+                    <label for="name"><i class="fas fa-user"></i> Name <span class="req">*</span></label>
+                    <input type="text" id="name" name="name" placeholder="Your Full Name" required autocomplete="name" pattern="[\s\S]{2,100}">
                 </div>
                 <div class="field">
-                    <label><i class="fas fa-briefcase"></i> Designation <span class="req">*</span></label>
+                    <label for="designation"><i class="fas fa-briefcase"></i> Designation <span class="req">*</span></label>
                     <input type="text" id="designation" name="designation" placeholder="e.g., Manager" required autocomplete="organization-title">
                 </div>
             </div>
 
             <div class="form-row">
                 <div class="field">
-                    <label><i class="fas fa-building"></i> Company <span class="req">*</span></label>
+                    <label for="company"><i class="fas fa-building"></i> Company <span class="req">*</span></label>
                     <input type="text" id="company" name="company" placeholder="Your Company" required autocomplete="organization">
                 </div>
                 <div class="field">
-                    <label><i class="fas fa-users"></i> Employees</label>
+                    <label for="employees"><i class="fas fa-users"></i> Employees</label>
                     <select id="employees" name="employees" autocomplete="off">
                         <option value="">Select</option>
                         <option value="1-10">1-10</option>
@@ -181,29 +171,27 @@
 
             <div class="form-row">
                 <div class="field">
-                    <label><i class="fas fa-phone"></i> Contact <span class="req">*</span></label>
-                    <input type="tel" id="phone" name="phone" placeholder="9876543210" pattern="[0-9]{10}" required autocomplete="tel">
+                    <label for="phone"><i class="fas fa-phone"></i> Contact <span class="req">*</span></label>
+                    <input type="tel" id="phone" name="phone" placeholder="9876543210" pattern="[6-9][0-9]{9}" required autocomplete="tel">
                 </div>
                 <div class="field">
-                    <label><i class="fas fa-envelope"></i> Email <span class="req">*</span></label>
+                    <label for="email"><i class="fas fa-envelope"></i> Email <span class="req">*</span></label>
                     <input type="email" id="email" name="email" placeholder="you@email.com" required autocomplete="email">
                 </div>
             </div>
 
             <div class="form-row">
-                <div class="field">
-                    <label><i class="fas fa-city"></i> City <span class="req">*</span></label>
+                <div class="field full">
+                    <label for="city"><i class="fas fa-city"></i> City <span class="req">*</span></label>
                     <input type="text" id="city" name="city" placeholder="Your City" required autocomplete="address-level2">
                 </div>
             </div>
 
-            <!-- Payment Card Section -->
             <div class="payment-card">
                 <div class="price">
                     <span class="label">Registration Fee</span>
                     <span class="amount">₹1</span>
                 </div>
-                
                 <div class="razorpay-section">
                     <p class="payment-note"><i class="fas fa-shield-alt"></i> Secure Payment via Razorpay</p>
                     <p class="payment-methods">
@@ -213,17 +201,15 @@
                         <i class="fas fa-university"></i> Net Banking
                     </p>
                 </div>
-
-                <p id="paymentStatus" class="status">⏳ Payment: <b>Pending</b></p>
-                
+                <p id="paymentStatus" class="status" aria-live="polite">⏳ Payment: <b>Pending</b></p>
                 <a href="https://rzp.io/rzp/5NCrTAI" id="payBtn" class="btn-primary" aria-label="Pay ₹1 via Razorpay">
                     <i class="fas fa-rupee-sign"></i> Pay ₹1 Securely
                 </a>
-                <p class="payment-hint"><small>🔒 You'll be redirected to Razorpay for payment</small></p>
+                <p class="payment-hint"><small>🔒 You'll be redirected to Razorpay</small></p>
             </div>
 
             <div class="field full">
-                <label><i class="fas fa-comment"></i> Remarks (Optional)</label>
+                <label for="remarks"><i class="fas fa-comment"></i> Remarks (Optional)</label>
                 <textarea id="remarks" name="remarks" rows="2" placeholder="Any special requirements..."></textarea>
             </div>
 
@@ -232,8 +218,8 @@
             </button>
         </form>
 
-        <!-- ========== SUCCESS SCREEN (Shared) ========== -->
-        <div id="successMsg" class="success hidden">
+        <!-- ========== SUCCESS SCREEN ========== -->
+        <div id="successMsg" class="success hidden" role="alert" aria-live="polite">
             <div class="success-icon"><i class="fas fa-check-circle"></i></div>
             <h2 id="successTitle">✅ Submission Successful!</h2>
             <p>Thank you, <span id="sName"></span>!</p>
@@ -243,16 +229,16 @@
                 <p><b>Amount:</b> <span id="sAmount"></span></p>
                 <p><b>Time:</b> <span id="sTime"></span></p>
                 <p id="paymentIdRow"><b>Payment ID:</b> <span id="sPaymentId"></span></p>
-                <p><b>Status:</b> <span id="sStatus" style="color:var(--success)">Completed</span></p>
+                <p><b>Status:</b> <span id="sStatus">Completed</span></p>
             </div>
-            <button onclick="window.print()" class="btn-outline"><i class="fas fa-print"></i> Print Receipt</button>
-            <button onclick="resetAll()" class="btn-primary" style="margin-top:10px">
+            <button type="button" onclick="window.print()" class="btn-outline"><i class="fas fa-print"></i> Print Receipt</button>
+            <button type="button" onclick="resetAll()" class="btn-primary" style="margin-top:10px">
                 <i class="fas fa-redo"></i> New Submission
             </button>
         </div>
 
         <!-- Loading Overlay -->
-        <div id="loader" class="loader hidden">
+        <div id="loader" class="loader hidden" aria-hidden="true">
             <div class="spin"></div>
             <p id="loaderText">Processing...</p>
         </div>
@@ -262,9 +248,8 @@
         <p>© 2026 EventPro • Razorpay Secured • Data Saved to Google Sheet</p>
     </footer>
 
-    <div id="toast" class="toast hidden"></div>
+    <div id="toast" class="toast hidden" role="alert" aria-live="assertive"></div>
     
-    <!-- ✅ Script -->
     <script src="js/script.js"></script>
 </body>
 </html>
