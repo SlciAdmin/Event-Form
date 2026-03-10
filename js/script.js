@@ -2,12 +2,15 @@
 * Event Registration System - Dual Form (Feedback + Paid)
 * Production Ready • Responsive • Accessible
 * FIXED: Clean form separation - One form at a time
+* ADDED: Star rating in Audit form
+* ADDED: 2 Google Sheets (Feedback + Audit)
 */
 const CONFIG = {
 PAYMENT_LINK: "https://rzp.io/rzp/5NCrTAI",
 AMOUNT: 99900,
 CURRENCY: "INR",
-GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbxR8886dsk6fB3xCKKWFjJSy5y5pJjHN6TLaynY06URgzuJyTO4QFOPhSB3bAwBjciw/exec",
+FEEDBACK_SHEET: "https://script.google.com/macros/s/AKfycbxR8886dsk6fB3xCKKWFjJSy5y5pJjHN6TLaynY06URgzuJyTO4QFOPhSB3bAwBjciw/exec",
+AUDIT_SHEET: "https://script.google.com/macros/s/AKfycbxR8886dsk6fB3xCKKWFjJSy5y5pJjHN6TLaynY06URgzuJyTO4QFOPhSB3bAwBjciw/exec",
 RETURN_URL: window.location.href.split('?')[0],
 DEBUG: false
 };
@@ -300,6 +303,9 @@ field.removeAttribute('aria-invalid');
 }
 });
 
+// Initialize audit star rating
+initStarRating('audit_starRating');
+
 debug('✅ Paid Form initialized');
 }
 
@@ -389,6 +395,18 @@ if (field && !validateField(field, 'paid')) {
 isValid = false;
 }
 });
+
+// Audit star rating required
+const auditRating = document.querySelector('input[name="audit_rating"]:checked');
+if (!auditRating) {
+showToast('Please select an experience rating', 'error');
+const ratingContainer = $('audit_starRating');
+if (ratingContainer) ratingContainer.style.borderColor = 'var(--danger)';
+isValid = false;
+} else {
+const ratingContainer = $('audit_starRating');
+if (ratingContainer) ratingContainer.style.borderColor = '';
+}
 
 return isValid;
 }
@@ -523,7 +541,7 @@ try {
 const data = collectPaidFormData();
 debug('📦 Paid registration data collected', data);
 
-await submitToGoogleSheets(data, 'paid');
+await submitToGoogleSheets(data, 'audit');
 
 showSuccess(data, 'paid');
 } catch (error) {
@@ -537,6 +555,7 @@ hideLoader();
 }
 
 function collectPaidFormData() {
+const auditRating = document.querySelector('input[name="audit_rating"]:checked')?.value || 'Not rated';
 return {
 name: $('name')?.value.trim() || '',
 designation: $('designation')?.value.trim() || '',
@@ -545,6 +564,7 @@ employees: $('employees')?.value.trim() || '',
 phone: $('phone')?.value.trim() || '',
 email: $('email')?.value.trim() || '',
 city: $('city')?.value.trim() || '',
+audit_rating: auditRating,
 remarks: $('remarks')?.value.trim() || 'None',
 form_type: 'paid_registration',
 payment_status: 'Paid',
@@ -597,22 +617,26 @@ debug('⚠️ Session cleanup failed', e);
 debug('✅ Paid form reset complete');
 }
 
-// ===== GOOGLE SHEETS INTEGRATION =====
+// ===== GOOGLE SHEETS INTEGRATION (2 SEPARATE SHEETS) =====
 async function submitToGoogleSheets(data, formType) {
+// Demo mode check
 if (!CONFIG.GOOGLE_SCRIPT || CONFIG.GOOGLE_SCRIPT.includes('YOUR_')) {
 debug('📋 Demo mode: Google Script not configured');
 return true;
 }
 
+// Select appropriate sheet URL
+const sheetURL = formType === 'feedback' ? CONFIG.FEEDBACK_SHEET : CONFIG.AUDIT_SHEET;
+
 try {
-const response = await fetch(CONFIG.GOOGLE_SCRIPT, {
+const response = await fetch(sheetURL, {
 method: 'POST',
 mode: 'no-cors',
 headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify(data)
 });
 
-debug(`✅ ${formType} data sent to Google Sheets`);
+debug(`✅ ${formType} data sent to Google Sheet`);
 return true;
 } catch (error) {
 console.error(`Google Sheets error (${formType}):`, error);
