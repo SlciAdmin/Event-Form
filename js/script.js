@@ -1,20 +1,17 @@
 /**
-* Event Registration System - Dual Form (Feedback + Paid)
-* Production Ready • Responsive • Accessible
-* FIXED: Clean form separation - One form at a time
-* ADDED: Star rating in Audit form
-* UPDATED: Single Google Apps Script URL for both Feedback + Audit sheets
-*/
+ * Event Registration System - Dual Form (Feedback + Paid)
+ * Production Ready • Responsive • Accessible
+ */
 const CONFIG = {
   PAYMENT_LINK: "https://rzp.io/rzp/5NCrTAI",
   AMOUNT: 99900,
   CURRENCY: "INR",
   
-  // ✅ SINGLE GOOGLE APPS SCRIPT URL (Handles both Feedback + Audit sheets)
-  GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbwdcMbAJXpXVD9FumMGACaySOWptPPMpKZk9B0RoDj2NhGybGP04Q7p7QlqoqwZF0o/exec",
+  // ✅ FIXED: No trailing spaces
+  GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbzq59DmEApdYfiABMIaJZRUGFMfOQv6VnAkvOjt7xXDO9h0_39kkcXtLXRdau8gxanatQ/exec ",
   
   RETURN_URL: window.location.href.split('?')[0],
-  DEBUG: true
+  DEBUG: true  // ✅ True rakho testing ke liye
 };
 
 // ===== STATE MANAGEMENT =====
@@ -38,11 +35,10 @@ function debug(msg, data = null) {
   }
 }
 
-// ===== VIEW NAVIGATION (FIXED - Clean Separation) =====
+// ===== VIEW NAVIGATION =====
 function showView(viewName) {
   currentView = viewName;
 
-  // STEP 1: Hide ALL views first (Critical Fix)
   const landingPage = $('landingPage');
   const feedbackForm = $('feedbackForm');
   const paidForm = $('paidForm');
@@ -65,14 +61,13 @@ function showView(viewName) {
     successMsg.classList.remove('active-form');
   }
 
-  // STEP 2: Show ONLY the requested view
   switch(viewName) {
     case 'landing':
       if (landingPage) {
         landingPage.classList.remove('hidden');
         landingPage.classList.add('active-form');
       }
-      debug('🏠 Landing page shown (Both buttons visible)');
+      debug('🏠 Landing page shown');
       break;
 
     case 'feedback':
@@ -80,7 +75,7 @@ function showView(viewName) {
         feedbackForm.classList.remove('hidden-form');
         feedbackForm.classList.add('active-form');
       }
-      debug('📋 Feedback form shown (ONLY feedback, NO buttons)');
+      debug('📋 Feedback form shown');
       break;
 
     case 'paid':
@@ -88,7 +83,7 @@ function showView(viewName) {
         paidForm.classList.remove('hidden-form');
         paidForm.classList.add('active-form');
       }
-      debug('💳 Paid form shown (ONLY audit, NO buttons)');
+      debug('💳 Paid form shown');
       break;
 
     case 'success':
@@ -100,25 +95,23 @@ function showView(viewName) {
       break;
   }
 
-  // STEP 3: Scroll to top
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function backToLanding() {
-  debug('⬅️ Back to landing requested');
+  debug('⬅️ Back to landing');
   showView('landing');
 }
 
 // ===== PAYMENT RETURN HANDLER =====
 function handlePaymentReturn() {
-  debug('🔍 Checking payment return parameters...');
+  debug('🔍 Checking payment return...');
   const urlParams = new URLSearchParams(window.location.search);
   const paymentId = urlParams.get('razorpay_payment_id');
   const status = urlParams.get('razorpay_payment_status');
   const orderId = urlParams.get('razorpay_order_id');
   const error = urlParams.get('razorpay_error');
 
-  // ✅ Payment Successful
   if (paymentId && status === 'captured') {
     debug('✅ Payment captured!', { paymentId, orderId });
     paymentDone = true;
@@ -141,7 +134,7 @@ function handlePaymentReturn() {
 
     setTimeout(() => {
       if (validatePaidForm()) {
-        debug('🔄 Auto-submitting paid form after payment...');
+        debug('🔄 Auto-submitting paid form...');
         handlePaidSubmit(null, true);
       }
     }, 500);
@@ -149,7 +142,6 @@ function handlePaymentReturn() {
     return true;
   }
 
-  // ❌ Payment Failed/Cancelled
   if (error || (status && status !== 'captured')) {
     debug('❌ Payment failed/cancelled', { error, status });
     showToast(`⚠️ Payment ${error ? 'Failed' : 'Cancelled'}. Please try again.`, 'warning');
@@ -160,18 +152,15 @@ function handlePaymentReturn() {
     return false;
   }
 
-  debug('ℹ️ No payment parameters in URL');
+  debug('ℹ️ No payment parameters');
   return false;
 }
 
 // ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
   debug('🚀 DOM Content Loaded');
-
-  // Show landing page by default
   showView('landing');
 
-  // Initialize buttons
   const feedbackBtn = $('showFeedbackBtn');
   const paidBtn = $('showPaidBtn');
 
@@ -193,11 +182,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Initialize forms
   initFeedbackForm();
   initPaidForm();
 
-  // Handle browser back/forward cache
   window.addEventListener('pageshow', (event) => {
     if (event.persisted) {
       debug('♻️ Page restored from bfcache');
@@ -207,14 +194,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Prevent form resubmission on refresh
   if (window.performance?.navigation?.type === 2) {
     debug('🔄 Page loaded via back/forward - resetting');
     resetAll();
   }
 });
 
-// ===== FEEDBACK FORM INITIALIZATION =====
+// ===== FEEDBACK FORM INIT =====
 function initFeedbackForm() {
   const form = $('feedbackForm');
   if (!form) return;
@@ -242,7 +228,7 @@ function initFeedbackForm() {
   debug('✅ Feedback Form initialized');
 }
 
-// ===== PAID FORM INITIALIZATION =====
+// ===== PAID FORM INIT =====
 function initPaidForm() {
   const form = $('paidForm');
   if (!form) return;
@@ -258,10 +244,10 @@ function initPaidForm() {
         updatePaymentUI(true);
         const submitBtn = $('submitBtn');
         if (submitBtn) submitBtn.disabled = false;
-        debug('🔄 Payment state restored from session');
+        debug('🔄 Payment state restored');
       }
     } catch (e) {
-      debug('⚠️ Failed to parse saved payment data', e);
+      debug('⚠️ Failed to parse payment data', e);
     }
   }
 
@@ -277,12 +263,12 @@ function initPaidForm() {
       try {
         const formData = collectPaidFormData();
         sessionStorage.setItem('tempPaidData', JSON.stringify(formData));
-        debug('💾 Form data saved for post-payment submission');
+        debug('💾 Form data saved');
       } catch (err) {
         debug('⚠️ Failed to save temp data', err);
       }
 
-      debug('🔗 Redirecting to Razorpay payment link...');
+      debug('🔗 Redirecting to Razorpay...');
       return true;
     });
   }
@@ -305,13 +291,11 @@ function initPaidForm() {
     }
   });
 
-  // Initialize audit star rating
   initStarRating('audit_starRating');
-
   debug('✅ Paid Form initialized');
 }
 
-// ===== VALIDATION FUNCTIONS =====
+// ===== VALIDATION =====
 function validateField(field, formType) {
   if (!field) return false;
 
@@ -344,7 +328,7 @@ function validateField(field, formType) {
   if (field.type === 'number' && value) {
     if (isNaN(value) || value < 1) {
       markInvalid(field);
-      showToast('Please enter a valid number of employees', 'error');
+      showToast('Please enter a valid number', 'error');
       isValid = false;
     }
   }
@@ -398,7 +382,6 @@ function validatePaidForm() {
     }
   });
 
-  // Audit star rating required
   const auditRating = document.querySelector('input[name="audit_rating"]:checked');
   if (!auditRating) {
     showToast('Please select an experience rating', 'error');
@@ -417,16 +400,15 @@ function markInvalid(field) {
   if (!field) return;
   field.style.borderColor = 'var(--danger)';
   field.setAttribute('aria-invalid', 'true');
-
   field.style.animation = 'none';
   setTimeout(() => {
     field.style.animation = 'shake 0.3s ease';
   }, 10);
 }
 
-// ===== FEEDBACK FORM SUBMISSION =====
+// ===== FEEDBACK SUBMISSION =====
 async function handleFeedbackSubmit() {
-  debug('📤 Feedback form submission triggered');
+  debug('📤 Feedback submission triggered');
 
   if (!validateFeedbackForm()) {
     showToast('Please fill all required fields correctly', 'error');
@@ -442,11 +424,10 @@ async function handleFeedbackSubmit() {
     debug('📦 Feedback data collected', data);
 
     await submitToGoogleSheets(data, 'feedback');
-
     showSuccess(data, 'feedback');
   } catch (error) {
     console.error('Feedback submission error:', error);
-    showToast('⚠️ Feedback saved locally. Confirmation pending.', 'warning');
+    showToast('⚠️ Feedback saved locally', 'warning');
     const data = collectFeedbackData();
     showSuccess(data, 'feedback');
   } finally {
@@ -496,14 +477,14 @@ function resetFeedbackForm() {
   const ratingContainer = $('fb_starRating');
   if (ratingContainer) ratingContainer.style.borderColor = '';
 
-  debug('✅ Feedback form reset complete');
+  debug('✅ Feedback form reset');
 }
 
-// ===== PAID FORM SUBMISSION =====
+// ===== PAID SUBMISSION =====
 async function handlePaidSubmit(e = null, autoSubmit = false) {
   if (e) e.preventDefault();
 
-  debug('📤 Paid form submission triggered', { autoSubmit });
+  debug('📤 Paid submission triggered', { autoSubmit });
 
   if (!paymentDone) {
     debug('❌ Payment not completed');
@@ -531,8 +512,8 @@ async function handlePaidSubmit(e = null, autoSubmit = false) {
   }
 
   if (!paymentData.razorpay_payment_id) {
-    debug('❌ No payment ID available');
-    showToast('⚠️ Payment verification failed. Please try again.', 'error');
+    debug('❌ No payment ID');
+    showToast('⚠️ Payment verification failed', 'error');
     resetPaidForm();
     return;
   }
@@ -541,14 +522,13 @@ async function handlePaidSubmit(e = null, autoSubmit = false) {
 
   try {
     const data = collectPaidFormData();
-    debug('📦 Paid registration data collected', data);
+    debug('📦 Paid data collected', data);
 
     await submitToGoogleSheets(data, 'audit');
-
     showSuccess(data, 'paid');
   } catch (error) {
     console.error('Paid submission error:', error);
-    showToast('⚠️ Registration saved. Confirmation email pending.', 'warning');
+    showToast('⚠️ Registration saved', 'warning');
     const data = collectPaidFormData();
     showSuccess(data, 'paid');
   } finally {
@@ -616,12 +596,11 @@ function resetPaidForm() {
     debug('⚠️ Session cleanup failed', e);
   }
 
-  debug('✅ Paid form reset complete');
+  debug('✅ Paid form reset');
 }
 
-// ===== GOOGLE SHEETS INTEGRATION (SINGLE URL - Handles Both Sheets) =====
+// ===== GOOGLE SHEETS SUBMISSION =====
 async function submitToGoogleSheets(data, formType) {
-  // Demo mode check
   if (!CONFIG.GOOGLE_SCRIPT || CONFIG.GOOGLE_SCRIPT.includes('YOUR_')) {
     debug('📋 Demo mode: Google Script not configured');
     return true;
@@ -645,7 +624,6 @@ async function submitToGoogleSheets(data, formType) {
 
 // ===== SUCCESS SCREEN =====
 function showSuccess(data, formType) {
-  // Hide both forms
   $('feedbackForm')?.classList.add('hidden-form');
   $('paidForm')?.classList.add('hidden-form');
 
@@ -693,7 +671,7 @@ function showSuccess(data, formType) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ===== PAYMENT UI UPDATES =====
+// ===== PAYMENT UI =====
 function updatePaymentUI(paid) {
   const paymentStatus = $('paymentStatus');
   const payBtn = $('payBtn');
@@ -770,7 +748,7 @@ function initStarRating(containerId) {
   });
 }
 
-// ===== LOADER UTILITIES =====
+// ===== LOADER =====
 function showLoader(text = 'Processing...') {
   const loader = $('loader');
   const loaderText = $('loaderText');
@@ -796,7 +774,7 @@ function hideLoader() {
   debug('🔄 Loader hidden');
 }
 
-// ===== TOAST NOTIFICATIONS =====
+// ===== TOAST =====
 function showToast(message, type = 'info') {
   const toast = $('toast');
   if (!toast) return;
@@ -825,32 +803,26 @@ function showToast(message, type = 'info') {
   debug(`🔔 Toast: [${type}] ${message}`);
 }
 
-// ===== GLOBAL RESET (FIXED - Clean Landing Page) =====
+// ===== GLOBAL RESET =====
 function resetAll() {
   debug('🔄 Global reset triggered');
 
-  // Hide success screen
   $('successMsg')?.classList.add('hidden');
-
-  // Reset both forms
   resetFeedbackForm();
   resetPaidForm();
-
-  // CRITICAL: Show ONLY landing page (both buttons)
   showView('landing');
 
-  // Clean URL
   if (window.history.replaceState) {
     window.history.replaceState({}, document.title, CONFIG.RETURN_URL);
   }
 
-  debug('✅ Global reset complete - Back to Landing Page (Both buttons visible)');
+  debug('✅ Global reset complete');
 }
 
 // ===== EVENT LISTENERS =====
 window.addEventListener('popstate', () => {
   if (!paymentDone && !window.location.search.includes('razorpay_')) {
-    debug('⬅️ Back navigation detected - resetting');
+    debug('⬅️ Back navigation - resetting');
     resetAll();
   }
 });
@@ -859,7 +831,7 @@ window.addEventListener('beforeunload', () => {
   try {
     sessionStorage.removeItem('tempPaidData');
   } catch (e) {
-    // Ignore quota errors
+    // Ignore
   }
 });
 
@@ -896,4 +868,4 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-debug('🎯 Event Registration System Ready - Clean Form Separation Enabled');
+debug('🎯 Event Registration System Ready');
