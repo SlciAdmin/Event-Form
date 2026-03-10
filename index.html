@@ -1,196 +1,237 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, proxy-revalidate" />
-<meta http-equiv="Pragma" content="no-cache" />
-<meta http-equiv="Expires" content="0" />
-<meta name="robots" content="noindex, nofollow" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<title>Event Registration | Feedback + Audit</title>
-<link rel="stylesheet" href="css/style.css" />
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, proxy-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+    <title>Event Registration | Feedback + Audit</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-<div class="container">
-<!-- Form Toggle Header -->
-<div class="form-toggle-header" role="tablist" aria-label="Form selection">
-<button type="button" id="showFeedbackBtn" class="toggle-btn" role="tab" aria-selected="false" aria-controls="feedbackForm">
-<i class="fas fa-comment-alt"></i> Feedback
-</button>
-<button type="button" id="showPaidBtn" class="toggle-btn" role="tab" aria-selected="false" aria-controls="paidForm">
-<i class="fas fa-file-invoice"></i> Audit Registration
-</button>
-</div>
+    <!-- Animated Background -->
+    <div class="bg-animation">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
 
-<!-- ========== FEEDBACK FORM ========== -->
-<form id="feedbackForm" class="hidden-form" novalidate>
-<div class="form-header">
-<h2><i class="fas fa-comment-dots"></i> Session Feedback</h2>
-<p class="form-subtitle">Share your experience • No payment required</p>
-</div>
-<div class="section-title"><i class="fas fa-user-circle"></i> Your Details</div>
-<div class="form-row">
-<div class="field">
-<label for="fb_name"><i class="fas fa-user"></i> Name <span class="req">*</span></label>
-<input type="text" id="fb_name" name="name" placeholder="Your Full Name" required autocomplete="name" pattern="[\s\S]{2,100}">
-</div>
-<div class="field">
-<label for="fb_designation"><i class="fas fa-briefcase"></i> Designation <span class="req">*</span></label>
-<input type="text" id="fb_designation" name="designation" placeholder="e.g., Manager" required autocomplete="organization-title">
-</div>
-</div>
-<div class="form-row">
-<div class="field">
-<label for="fb_company"><i class="fas fa-building"></i> Company <span class="req">*</span></label>
-<input type="text" id="fb_company" name="company" placeholder="Your Company" required autocomplete="organization">
-</div>
-<div class="field">
-<label for="fb_employees"><i class="fas fa-users"></i> Number of Employees <span class="req">*</span></label>
-<input type="number" id="fb_employees" name="employees" placeholder="e.g., 50" min="1" required autocomplete="off">
-</div>
-</div>
-<div class="form-row">
-<div class="field">
-<label for="fb_phone"><i class="fas fa-phone"></i> Contact <span class="req">*</span></label>
-<input type="tel" id="fb_phone" name="phone" placeholder="9876543210" pattern="[6-9][0-9]{9}" required autocomplete="tel">
-</div>
-<div class="field">
-<label for="fb_email"><i class="fas fa-envelope"></i> Email <span class="req">*</span></label>
-<input type="email" id="fb_email" name="email" placeholder="you@email.com" required autocomplete="email">
-</div>
-</div>
-<div class="form-row">
-<div class="field full">
-<label for="fb_city"><i class="fas fa-city"></i> City <span class="req">*</span></label>
-<input type="text" id="fb_city" name="city" placeholder="Your City" required autocomplete="address-level2">
-</div>
-</div>
-<div class="section-title"><i class="fas fa-clipboard-question"></i> Session Feedback</div>
-<div class="field full">
-<label for="fb_starRating"><i class="fas fa-star"></i> Overall Session Rating <span class="req">*</span></label>
-<div class="star-rating" id="fb_starRating" role="radiogroup" aria-label="Session Rating">
-<input type="radio" id="fb_star5" name="fb_rating" value="5" required><label for="fb_star5" title="5 stars">★</label>
-<input type="radio" id="fb_star4" name="fb_rating" value="4"><label for="fb_star4" title="4 stars">★</label>
-<input type="radio" id="fb_star3" name="fb_rating" value="3"><label for="fb_star3" title="3 stars">★</label>
-<input type="radio" id="fb_star2" name="fb_rating" value="2"><label for="fb_star2" title="2 stars">★</label>
-<input type="radio" id="fb_star1" name="fb_rating" value="1"><label for="fb_star1" title="1 star">★</label>
-</div>
-</div>
-<div class="field full">
-<label for="fb_remarks"><i class="fas fa-comment"></i> Remarks</label>
-<textarea id="fb_remarks" name="remarks" rows="2" placeholder="Anything else..."></textarea>
-</div>
-<button type="submit" id="fb_submitBtn" class="btn-success">
-<i class="fas fa-paper-plane"></i> Submit Feedback
-</button>
-</form>
+    <div class="container">
+        <!-- Hero Section -->
+        <div class="hero-section">
+            <div class="logo-area">
+                <i class="fas fa-layer-group"></i>
+                <span>EventPro</span>
+            </div>
+            <h1>Welcome to the Session</h1>
+            <p class="subtitle">Choose an option below to proceed</p>
+        </div>
 
-<!-- ========== PAID REGISTRATION FORM ========== -->
-<form id="paidForm" class="hidden-form" novalidate>
-<div class="form-header">
-<h2><i class="fas fa-ticket-alt"></i> Audit Registration</h2>
-<p class="form-subtitle">Secure Payment • Limited Time Offer</p>
-</div>
-<div class="section-title"><i class="fas fa-user-circle"></i> Your Details</div>
-<div class="form-row">
-<div class="field">
-<label for="name"><i class="fas fa-user"></i> Name <span class="req">*</span></label>
-<input type="text" id="name" name="name" placeholder="Your Full Name" required autocomplete="name" pattern="[\s\S]{2,100}">
-</div>
-<div class="field">
-<label for="designation"><i class="fas fa-briefcase"></i> Designation <span class="req">*</span></label>
-<input type="text" id="designation" name="designation" placeholder="e.g., Manager" required autocomplete="organization-title">
-</div>
-</div>
-<div class="form-row">
-<div class="field">
-<label for="company"><i class="fas fa-building"></i> Company <span class="req">*</span></label>
-<input type="text" id="company" name="company" placeholder="Your Company" required autocomplete="organization">
-</div>
-<div class="field">
-<label for="employees"><i class="fas fa-users"></i> Number of Employees <span class="req">*</span></label>
-<input type="number" id="employees" name="employees" placeholder="e.g., 50" min="1" required autocomplete="off">
-</div>
-</div>
-<div class="form-row">
-<div class="field">
-<label for="phone"><i class="fas fa-phone"></i> Contact <span class="req">*</span></label>
-<input type="tel" id="phone" name="phone" placeholder="9876543210" pattern="[6-9][0-9]{9}" required autocomplete="tel">
-</div>
-<div class="field">
-<label for="email"><i class="fas fa-envelope"></i> Email <span class="req">*</span></label>
-<input type="email" id="email" name="email" placeholder="you@email.com" required autocomplete="email">
-</div>
-</div>
-<div class="form-row">
-<div class="field full">
-<label for="city"><i class="fas fa-city"></i> City <span class="req">*</span></label>
-<input type="text" id="city" name="city" placeholder="Your City" required autocomplete="address-level2">
-</div>
-</div>
-<div class="payment-card">
-<div class="price">
-<span class="label">Registration Fee</span>
-<div class="price-box">
-<span class="amount-old">₹15000</span>
-<span class="amount-new">₹999</span>
-</div>
-</div>
-<div class="offer-badge">Limited Time Offer</div>
-<div class="razorpay-section">
-<p class="payment-note"><i class="fas fa-shield-alt"></i> Secure Payment via Razorpay</p>
-<p class="payment-methods">
-<i class="fas fa-credit-card"></i> Cards •
-<i class="fas fa-mobile-alt"></i> UPI •
-<i class="fas fa-wallet"></i> Wallets •
-<i class="fas fa-university"></i> Net Banking
-</p>
-</div>
-<p id="paymentStatus" class="status" aria-live="polite">⏳ Payment: <b>Pending</b></p>
-<a href="https://rzp.io/rzp/5NCrTAI" id="payBtn" class="btn-primary" aria-label="Pay ₹999 via Razorpay">
-<i class="fas fa-rupee-sign"></i> Pay ₹999 Securely
-</a>
-<p class="payment-hint"><small>🔒 You'll be redirected to Razorpay</small></p>
-</div>
-<div class="field full">
-<label for="remarks"><i class="fas fa-comment"></i> Remarks (Optional)</label>
-<textarea id="remarks" name="remarks" rows="2" placeholder="Any special requirements..."></textarea>
-</div>
-<button type="submit" id="submitBtn" class="btn-success" disabled>
-<i class="fas fa-check"></i> Complete Registration
-</button>
-</form>
+        <!-- Form Toggle Header (Choice Selection) -->
+        <div class="form-toggle-header" role="tablist" aria-label="Form selection">
+            <button type="button" id="showFeedbackBtn" class="toggle-btn" role="tab" aria-selected="false" aria-controls="feedbackForm">
+                <div class="btn-icon"><i class="fas fa-comment-alt"></i></div>
+                <div class="btn-text">
+                    <span class="main">Feedback</span>
+                    <span class="sub">Free Session Review</span>
+                </div>
+            </button>
+            <button type="button" id="showPaidBtn" class="toggle-btn" role="tab" aria-selected="false" aria-controls="paidForm">
+                <div class="btn-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+                <div class="btn-text">
+                    <span class="main">Audit Reg</span>
+                    <span class="sub">₹999 Limited Offer</span>
+                </div>
+            </button>
+        </div>
 
-<!-- ========== SUCCESS SCREEN ========== -->
-<div id="successMsg" class="success hidden" role="alert" aria-live="polite">
-<div class="success-icon"><i class="fas fa-check-circle"></i></div>
-<h2 id="successTitle">✅ Submission Successful!</h2>
-<p>Thank you, <span id="sName"></span>!</p>
-<p class="conf">Confirmation sent to: <span id="sEmail"></span></p>
-<div class="receipt">
-<p><b>Type:</b> <span id="sType"></span></p>
-<p><b>Amount:</b> <span id="sAmount"></span></p>
-<p><b>Time:</b> <span id="sTime"></span></p>
-<p id="paymentIdRow"><b>Payment ID:</b> <span id="sPaymentId"></span></p>
-<p><b>Status:</b> <span id="sStatus">Completed</span></p>
-</div>
-<button type="button" onclick="window.print()" class="btn-outline"><i class="fas fa-print"></i> Print Receipt</button>
-<button type="button" onclick="resetAll()" class="btn-primary" style="margin-top:10px">
-<i class="fas fa-redo"></i> Back to Home
-</button>
-</div>
+        <!-- ========== FEEDBACK FORM ========== -->
+        <form id="feedbackForm" class="hidden-form" novalidate>
+            <div class="form-header">
+                <div class="badge free">Free</div>
+                <h2><i class="fas fa-comment-dots"></i> Session Feedback</h2>
+                <p class="form-subtitle">Share your experience • No payment required</p>
+            </div>
+            
+            <div class="section-title"><i class="fas fa-user-circle"></i> Your Details</div>
+            <div class="form-row">
+                <div class="field">
+                    <label for="fb_name"><i class="fas fa-user"></i> Name <span class="req">*</span></label>
+                    <input type="text" id="fb_name" name="name" placeholder="John Doe" required autocomplete="name" pattern="[\s\S]{2,100}">
+                </div>
+                <div class="field">
+                    <label for="fb_designation"><i class="fas fa-briefcase"></i> Designation <span class="req">*</span></label>
+                    <input type="text" id="fb_designation" name="designation" placeholder="e.g., Manager" required autocomplete="organization-title">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="field">
+                    <label for="fb_company"><i class="fas fa-building"></i> Company <span class="req">*</span></label>
+                    <input type="text" id="fb_company" name="company" placeholder="Your Company" required autocomplete="organization">
+                </div>
+                <div class="field">
+                    <label for="fb_employees"><i class="fas fa-users"></i> Employees <span class="req">*</span></label>
+                    <input type="number" id="fb_employees" name="employees" placeholder="e.g., 50" min="1" required autocomplete="off">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="field">
+                    <label for="fb_phone"><i class="fas fa-phone"></i> Contact <span class="req">*</span></label>
+                    <input type="tel" id="fb_phone" name="phone" placeholder="9876543210" pattern="[6-9][0-9]{9}" required autocomplete="tel">
+                </div>
+                <div class="field">
+                    <label for="fb_email"><i class="fas fa-envelope"></i> Email <span class="req">*</span></label>
+                    <input type="email" id="fb_email" name="email" placeholder="you@email.com" required autocomplete="email">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="field full">
+                    <label for="fb_city"><i class="fas fa-city"></i> City <span class="req">*</span></label>
+                    <input type="text" id="fb_city" name="city" placeholder="Your City" required autocomplete="address-level2">
+                </div>
+            </div>
 
-<!-- Loading Overlay -->
-<div id="loader" class="loader hidden" aria-hidden="true">
-<div class="spin"></div>
-<p id="loaderText">Processing...</p>
-</div>
-</div>
-<footer>
-<p>© 2026 EventPro • Razorpay Secured • Data Saved to Google Sheet</p>
-</footer>
-<div id="toast" class="toast hidden" role="alert" aria-live="assertive"></div>
-<script src="js/script.js"></script>
+            <div class="section-title"><i class="fas fa-clipboard-question"></i> Session Feedback</div>
+            <div class="field full">
+                <label for="fb_starRating"><i class="fas fa-star"></i> Overall Rating <span class="req">*</span></label>
+                <div class="star-rating" id="fb_starRating" role="radiogroup" aria-label="Session Rating">
+                    <input type="radio" id="fb_star5" name="fb_rating" value="5" required><label for="fb_star5" title="5 stars">★</label>
+                    <input type="radio" id="fb_star4" name="fb_rating" value="4"><label for="fb_star4" title="4 stars">★</label>
+                    <input type="radio" id="fb_star3" name="fb_rating" value="3"><label for="fb_star3" title="3 stars">★</label>
+                    <input type="radio" id="fb_star2" name="fb_rating" value="2"><label for="fb_star2" title="2 stars">★</label>
+                    <input type="radio" id="fb_star1" name="fb_rating" value="1"><label for="fb_star1" title="1 star">★</label>
+                </div>
+            </div>
+            <div class="field full">
+                <label for="fb_remarks"><i class="fas fa-comment"></i> Remarks</label>
+                <textarea id="fb_remarks" name="remarks" rows="2" placeholder="Anything else..."></textarea>
+            </div>
+            <button type="submit" id="fb_submitBtn" class="btn-success">
+                <i class="fas fa-paper-plane"></i> Submit Feedback
+            </button>
+        </form>
+
+        <!-- ========== PAID REGISTRATION FORM ========== -->
+        <form id="paidForm" class="hidden-form" novalidate>
+            <div class="form-header">
+                <div class="badge premium">Premium</div>
+                <h2><i class="fas fa-ticket-alt"></i> Audit Registration</h2>
+                <p class="form-subtitle">Secure Payment • Limited Time Offer</p>
+            </div>
+
+            <div class="section-title"><i class="fas fa-user-circle"></i> Your Details</div>
+            <div class="form-row">
+                <div class="field">
+                    <label for="name"><i class="fas fa-user"></i> Name <span class="req">*</span></label>
+                    <input type="text" id="name" name="name" placeholder="John Doe" required autocomplete="name" pattern="[\s\S]{2,100}">
+                </div>
+                <div class="field">
+                    <label for="designation"><i class="fas fa-briefcase"></i> Designation <span class="req">*</span></label>
+                    <input type="text" id="designation" name="designation" placeholder="e.g., Manager" required autocomplete="organization-title">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="field">
+                    <label for="company"><i class="fas fa-building"></i> Company <span class="req">*</span></label>
+                    <input type="text" id="company" name="company" placeholder="Your Company" required autocomplete="organization">
+                </div>
+                <div class="field">
+                    <label for="employees"><i class="fas fa-users"></i> Employees <span class="req">*</span></label>
+                    <input type="number" id="employees" name="employees" placeholder="e.g., 50" min="1" required autocomplete="off">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="field">
+                    <label for="phone"><i class="fas fa-phone"></i> Contact <span class="req">*</span></label>
+                    <input type="tel" id="phone" name="phone" placeholder="9876543210" pattern="[6-9][0-9]{9}" required autocomplete="tel">
+                </div>
+                <div class="field">
+                    <label for="email"><i class="fas fa-envelope"></i> Email <span class="req">*</span></label>
+                    <input type="email" id="email" name="email" placeholder="you@email.com" required autocomplete="email">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="field full">
+                    <label for="city"><i class="fas fa-city"></i> City <span class="req">*</span></label>
+                    <input type="text" id="city" name="city" placeholder="Your City" required autocomplete="address-level2">
+                </div>
+            </div>
+
+            <!-- Enhanced Payment Card -->
+            <div class="payment-card">
+                <div class="offer-badge pulse">🔥 Limited Time Offer</div>
+                <div class="price">
+                    <span class="label">Registration Fee</span>
+                    <div class="price-box">
+                        <span class="amount-old">₹15,000</span>
+                        <span class="amount-new">₹999</span>
+                    </div>
+                </div>
+                <div class="razorpay-section">
+                    <p class="payment-note"><i class="fas fa-shield-alt"></i> Secure Payment via Razorpay</p>
+                    <div class="payment-methods">
+                        <span><i class="fas fa-credit-card"></i> Cards</span>
+                        <span><i class="fas fa-mobile-alt"></i> UPI</span>
+                        <span><i class="fas fa-wallet"></i> Wallets</span>
+                        <span><i class="fas fa-university"></i> Net Banking</span>
+                    </div>
+                </div>
+                <p id="paymentStatus" class="status" aria-live="polite">⏳ Payment: <b>Pending</b></p>
+                <a href="https://rzp.io/rzp/5NCrTAI" id="payBtn" class="btn-primary" aria-label="Pay ₹999 via Razorpay">
+                    <i class="fas fa-lock"></i> Pay ₹999 Securely
+                </a>
+                <p class="payment-hint"><small>🔒 You'll be redirected to Razorpay</small></p>
+            </div>
+
+            <div class="field full">
+                <label for="remarks"><i class="fas fa-comment"></i> Remarks (Optional)</label>
+                <textarea id="remarks" name="remarks" rows="2" placeholder="Any special requirements..."></textarea>
+            </div>
+            <button type="submit" id="submitBtn" class="btn-success" disabled>
+                <i class="fas fa-check-circle"></i> Complete Registration
+            </button>
+        </form>
+
+        <!-- ========== SUCCESS SCREEN ========== -->
+        <div id="successMsg" class="success hidden" role="alert" aria-live="polite">
+            <div class="success-icon"><i class="fas fa-check-circle"></i></div>
+            <h2 id="successTitle">✅ Submission Successful!</h2>
+            <p>Thank you, <span id="sName"></span>!</p>
+            <p class="conf">Confirmation sent to: <span id="sEmail"></span></p>
+            <div class="receipt">
+                <div class="receipt-row"><span><b>Type:</b></span> <span id="sType"></span></div>
+                <div class="receipt-row"><span><b>Amount:</b></span> <span id="sAmount"></span></div>
+                <div class="receipt-row"><span><b>Time:</b></span> <span id="sTime"></span></div>
+                <div class="receipt-row" id="paymentIdRow"><span><b>Payment ID:</b></span> <span id="sPaymentId"></span></div>
+                <div class="receipt-row"><span><b>Status:</b></span> <span id="sStatus">Completed</span></div>
+            </div>
+            <button type="button" onclick="window.print()" class="btn-outline"><i class="fas fa-print"></i> Print Receipt</button>
+            <button type="button" onclick="resetAll()" class="btn-primary" style="margin-top:10px">
+                <i class="fas fa-redo"></i> Back to Home
+            </button>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loader" class="loader hidden" aria-hidden="true">
+            <div class="spin"></div>
+            <p id="loaderText">Processing...</p>
+        </div>
+    </div>
+
+    <footer>
+        <p>© 2026 EventPro • <i class="fas fa-lock"></i> Razorpay Secured • Data Saved to Google Sheet</p>
+    </footer>
+
+    <div id="toast" class="toast hidden" role="alert" aria-live="assertive"></div>
+
+    <!-- Custom Script -->
+    <script src="script.js"></script>
 </body>
 </html>
