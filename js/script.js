@@ -11,10 +11,10 @@ const CONFIG = {
   CURRENCY: "INR",
   
   // ✅ SINGLE GOOGLE APPS SCRIPT URL (Handles both Feedback + Audit sheets)
-  GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbxfHjTpEpvWdHdCoN_pmGDjjuPOtacCPfpWr3nYXuJHiah7oJbIsH4PrNY68_MPQAWx/exec",
+  GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbwdcMbAJXpXVD9FumMGACaySOWptPPMpKZk9B0RoDj2NhGybGP04Q7p7QlqoqwZF0o/exec",
   
   RETURN_URL: window.location.href.split('?')[0],
-  DEBUG: false
+  DEBUG: true
 };
 
 // ===== STATE MANAGEMENT =====
