@@ -1,22 +1,22 @@
 /**
- * Event Registration System - FIXED (No Duplicate Entries)
+ * Event Registration System - FULLY FIXED
  */
 const CONFIG = {
-  PAYMENT_LINK: "https://rzp.io/rzp/5NCrTAI",
+  PAYMENT_LINK: "https://rzp.io/rzp/5NCrTAI",  // ✅ NO SPACES
   AMOUNT: 99900,
   CURRENCY: "INR",
   
-  // ✅ NO TRAILING SPACES
+  // ✅ EXACT URL - NO TRAILING SPACES
   GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycby-CCVNdzSYRrG9BBbc3AflAVvtTpKmlitmJAXsK-GzUqVur5xZxQxvWK0_1qGTPAMi5Q/exec",
   
   RETURN_URL: window.location.href.split('?')[0],
-  DEBUG: true
+  DEBUG: true  // ✅ TRUE RAKHO TESTING KE LIYE
 };
 
 // ===== STATE MANAGEMENT =====
 let paymentDone = false;
 let currentView = 'landing';
-let isSubmitting = false; // ✅ PREVENT DOUBLE SUBMISSION
+let isSubmitting = false;
 let paymentData = {
   razorpay_payment_id: "",
   razorpay_order_id: "",
@@ -130,15 +130,20 @@ function handlePaymentReturn() {
 
     updatePaymentUI(true);
     const submitBtn = $('submitBtn');
-    if (submitBtn) submitBtn.disabled = false;
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      debug('✅ Submit button enabled');
+    }
 
-    // ✅ REMOVED AUTO-SUBMIT - User must click "Complete Registration"
-    // setTimeout(() => {
-    //   if (validatePaidForm()) {
-    //     debug('🔄 Auto-submitting paid form...');
-    //     handlePaidSubmit(null, true);
-    //   }
-    // }, 500);
+    // ✅ AUTO-SUBMIT ENABLED - Payment ke baad automatically submit karega
+    setTimeout(() => {
+      if (validatePaidForm()) {
+        debug('🔄 Auto-submitting paid form after payment...');
+        handlePaidSubmit(null, true);
+      } else {
+        debug('⚠️ Form validation failed - waiting for user to click Complete Registration');
+      }
+    }, 1000);
 
     return true;
   }
@@ -285,7 +290,7 @@ function initPaidForm() {
     });
   }
 
-  // ✅ SINGLE SUBMIT HANDLER - NO AUTO-SUBMIT
+  // ✅ SINGLE SUBMIT HANDLER
   newForm.addEventListener('submit', (e) => {
     e.preventDefault();
     if (!isSubmitting && paymentDone) {
@@ -427,9 +432,8 @@ function markInvalid(field) {
 async function handleFeedbackSubmit() {
   debug('📤 Feedback submission triggered');
 
-  // ✅ PREVENT DOUBLE SUBMISSION
   if (isSubmitting) {
-    debug('⚠️ Already submitting - ignoring duplicate request');
+    debug('⚠️ Already submitting - ignoring');
     return;
   }
 
@@ -440,7 +444,7 @@ async function handleFeedbackSubmit() {
     return;
   }
 
-  isSubmitting = true; // ✅ LOCK SUBMISSION
+  isSubmitting = true;
   showLoader('Submitting Feedback...');
 
   try {
@@ -450,13 +454,12 @@ async function handleFeedbackSubmit() {
     await submitToGoogleSheets(data, 'feedback');
     showSuccess(data, 'feedback');
   } catch (error) {
-    console.error('Feedback submission error:', error);
+    console.error('Feedback error:', error);
     showToast('⚠️ Feedback saved locally', 'warning');
-    const data = collectFeedbackData();
-    showSuccess(data, 'feedback');
+    showSuccess(collectFeedbackData(), 'feedback');
   } finally {
     hideLoader();
-    isSubmitting = false; // ✅ UNLOCK
+    isSubmitting = false;
   }
 }
 
@@ -511,9 +514,8 @@ async function handlePaidSubmit(e = null, autoSubmit = false) {
 
   debug('📤 Paid submission triggered', { autoSubmit });
 
-  // ✅ PREVENT DOUBLE SUBMISSION
   if (isSubmitting) {
-    debug('⚠️ Already submitting - ignoring duplicate request');
+    debug('⚠️ Already submitting - ignoring');
     return;
   }
 
@@ -549,7 +551,7 @@ async function handlePaidSubmit(e = null, autoSubmit = false) {
     return;
   }
 
-  isSubmitting = true; // ✅ LOCK SUBMISSION
+  isSubmitting = true;
   showLoader(autoSubmit ? 'Processing Payment...' : 'Processing Registration...');
 
   try {
@@ -561,11 +563,10 @@ async function handlePaidSubmit(e = null, autoSubmit = false) {
   } catch (error) {
     console.error('Paid submission error:', error);
     showToast('⚠️ Registration saved', 'warning');
-    const data = collectPaidFormData();
-    showSuccess(data, 'paid');
+    showSuccess(collectPaidFormData(), 'paid');
   } finally {
     hideLoader();
-    isSubmitting = false; // ✅ UNLOCK
+    isSubmitting = false;
   }
 }
 
@@ -639,6 +640,8 @@ async function submitToGoogleSheets(data, formType) {
     return true;
   }
 
+  debug(`📤 Sending ${formType} data to Google Sheets...`);
+
   try {
     const response = await fetch(CONFIG.GOOGLE_SCRIPT, {
       method: 'POST',
@@ -647,10 +650,11 @@ async function submitToGoogleSheets(data, formType) {
       body: JSON.stringify(data)
     });
 
-    debug(`✅ ${formType} data sent to Google Sheet - SINGLE ENTRY`);
+    debug(`✅ ${formType} data sent successfully - SINGLE ENTRY`);
     return true;
   } catch (error) {
     console.error(`Google Sheets error (${formType}):`, error);
+    debug(`❌ Error sending ${formType} data:`, error);
     return false;
   }
 }
@@ -697,7 +701,7 @@ function showSuccess(data, formType) {
         : '✅ Feedback Submitted!';
     }
 
-    debug(`🎉 Success screen displayed for ${formType} - SINGLE ENTRY`);
+    debug(`🎉 Success screen displayed for ${formType}`);
   }
 
   currentView = 'success';
@@ -724,6 +728,7 @@ function updatePaymentUI(paid) {
     if (submitBtn) {
       submitBtn.disabled = false;
       submitBtn.focus();
+      debug('✅ Submit button enabled after payment');
     }
 
     debug('🎨 Payment UI: Paid state');
@@ -843,7 +848,7 @@ function resetAll() {
   $('successMsg')?.classList.add('hidden');
   resetFeedbackForm();
   resetPaidForm();
-  isSubmitting = false; // ✅ RESET SUBMISSION LOCK
+  isSubmitting = false;
   showView('landing');
 
   if (window.history.replaceState) {
@@ -902,4 +907,4 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-debug('🎯 Event Registration System Ready - NO DUPLICATE ENTRIES');
+debug('🎯 Event Registration System Ready - Feedback + Audit Working');
