@@ -12,39 +12,53 @@
     <!-- ✅ Viewport -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
     
-    <title>Event Registration | ₹1 Payment</title>
+    <title>Event Registration | Feedback + ₹1 Payment</title>
     
-    <!-- ✅ CSS Files - NO SPACES IN URLS -->
+    <!-- ✅ CSS Files -->
     <link rel="stylesheet" href="css/style.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1><i class="fas fa-ticket-alt"></i> Seminar Registration</h1>
-            <p class="tagline">Secure Payment • ₹1 • Instant Confirmation</p>
+        <!-- Form Toggle Header -->
+        <div class="form-toggle-header">
+            <button type="button" id="showFeedbackBtn" class="toggle-btn active" aria-pressed="true">
+                <i class="fas fa-comment-alt"></i> Free Feedback
+            </button>
+            <button type="button" id="showPaidBtn" class="toggle-btn" aria-pressed="false">
+                <i class="fas fa-rupee-sign"></i> Register & Pay ₹1
+            </button>
         </div>
 
-        <form id="regForm">
+        <!-- ========== FEEDBACK FORM (DEFAULT) ========== -->
+        <form id="feedbackForm" class="active-form">
+            <div class="form-header">
+                <h2><i class="fas fa-comment-dots"></i> Session Feedback</h2>
+                <p class="form-subtitle">Share your experience • No payment required</p>
+            </div>
+
+            <!-- User Details Section -->
+            <div class="section-title"><i class="fas fa-user-circle"></i> Your Details</div>
+            
             <div class="form-row">
                 <div class="field">
                     <label><i class="fas fa-user"></i> Name <span class="req">*</span></label>
-                    <input type="text" id="name" placeholder="Your Full Name" required autocomplete="name">
+                    <input type="text" id="fb_name" name="name" placeholder="Your Full Name" required autocomplete="name">
                 </div>
                 <div class="field">
                     <label><i class="fas fa-briefcase"></i> Designation <span class="req">*</span></label>
-                    <input type="text" id="designation" placeholder="e.g., Manager" required autocomplete="organization-title">
+                    <input type="text" id="fb_designation" name="designation" placeholder="e.g., Manager" required autocomplete="organization-title">
                 </div>
             </div>
 
             <div class="form-row">
                 <div class="field">
                     <label><i class="fas fa-building"></i> Company <span class="req">*</span></label>
-                    <input type="text" id="company" placeholder="Your Company" required autocomplete="organization">
+                    <input type="text" id="fb_company" name="company" placeholder="Your Company" required autocomplete="organization">
                 </div>
                 <div class="field">
                     <label><i class="fas fa-users"></i> Employees</label>
-                    <select id="employees" autocomplete="off">
+                    <select id="fb_employees" name="employees" autocomplete="off">
                         <option value="">Select</option>
                         <option value="1-10">1-10</option>
                         <option value="11-50">11-50</option>
@@ -57,37 +71,133 @@
             <div class="form-row">
                 <div class="field">
                     <label><i class="fas fa-phone"></i> Contact <span class="req">*</span></label>
-                    <input type="tel" id="phone" placeholder="9876543210" pattern="[0-9]{10}" required autocomplete="tel">
+                    <input type="tel" id="fb_phone" name="phone" placeholder="9876543210" pattern="[0-9]{10}" required autocomplete="tel">
                 </div>
                 <div class="field">
                     <label><i class="fas fa-envelope"></i> Email <span class="req">*</span></label>
-                    <input type="email" id="email" placeholder="you@email.com" required autocomplete="email">
+                    <input type="email" id="fb_email" name="email" placeholder="you@email.com" required autocomplete="email">
                 </div>
             </div>
 
             <div class="form-row">
                 <div class="field">
                     <label><i class="fas fa-city"></i> City <span class="req">*</span></label>
-                    <input type="text" id="city" placeholder="Your City" required autocomplete="address-level2">
+                    <input type="text" id="fb_city" name="city" placeholder="Your City" required autocomplete="address-level2">
                 </div>
-                <div class="field">
-                    <label><i class="fas fa-star"></i> Rating</label>
-                    <div class="star-rating" id="starRating" role="radiogroup" aria-label="Rating">
-                        <input type="radio" id="star5" name="rating" value="5"><label for="star5" title="5 stars">★</label>
-                        <input type="radio" id="star4" name="rating" value="4"><label for="star4" title="4 stars">★</label>
-                        <input type="radio" id="star3" name="rating" value="3"><label for="star3" title="3 stars">★</label>
-                        <input type="radio" id="star2" name="rating" value="2"><label for="star2" title="2 stars">★</label>
-                        <input type="radio" id="star1" name="rating" value="1"><label for="star1" title="1 star">★</label>
-                    </div>
+            </div>
+
+            <!-- Session Feedback Questions -->
+            <div class="section-title"><i class="fas fa-clipboard-question"></i> Session Feedback</div>
+            
+            <div class="field full">
+                <label><i class="fas fa-star"></i> Overall Session Rating <span class="req">*</span></label>
+                <div class="star-rating" id="fb_starRating" role="radiogroup" aria-label="Session Rating">
+                    <input type="radio" id="fb_star5" name="fb_rating" value="5" required><label for="fb_star5" title="5 stars">★</label>
+                    <input type="radio" id="fb_star4" name="fb_rating" value="4"><label for="fb_star4" title="4 stars">★</label>
+                    <input type="radio" id="fb_star3" name="fb_rating" value="3"><label for="fb_star3" title="3 stars">★</label>
+                    <input type="radio" id="fb_star2" name="fb_rating" value="2"><label for="fb_star2" title="2 stars">★</label>
+                    <input type="radio" id="fb_star1" name="fb_rating" value="1"><label for="fb_star1" title="1 star">★</label>
                 </div>
             </div>
 
             <div class="field full">
-                <label><i class="fas fa-comment"></i> Remarks</label>
-                <textarea id="remarks" rows="2" placeholder="Any special requirements..." autocomplete="off"></textarea>
+                <label><i class="fas fa-lightbulb"></i> What did you learn from this session? <span class="req">*</span></label>
+                <textarea id="fb_learned" name="learned" rows="2" placeholder="Key takeaways..." required></textarea>
             </div>
 
-            <!-- Payment Card -->
+            <div class="field full">
+                <label><i class="fas fa-chalkboard-teacher"></i> How would you rate the speaker/presenter?</label>
+                <select id="fb_speaker_rating" name="speaker_rating">
+                    <option value="">Select Rating</option>
+                    <option value="Excellent">Excellent</option>
+                    <option value="Very Good">Very Good</option>
+                    <option value="Good">Good</option>
+                    <option value="Average">Average</option>
+                    <option value="Needs Improvement">Needs Improvement</option>
+                </select>
+            </div>
+
+            <div class="field full">
+                <label><i class="fas fa-thumbs-up"></i> Would you recommend this session to others? <span class="req">*</span></label>
+                <div class="radio-group">
+                    <label class="radio-option"><input type="radio" name="fb_recommend" value="Yes" required> Yes</label>
+                    <label class="radio-option"><input type="radio" name="fb_recommend" value="Maybe"> Maybe</label>
+                    <label class="radio-option"><input type="radio" name="fb_recommend" value="No"> No</label>
+                </div>
+            </div>
+
+            <div class="field full">
+                <label><i class="fas fa-comment-alt"></i> Any suggestions for improvement?</label>
+                <textarea id="fb_suggestions" name="suggestions" rows="2" placeholder="Your valuable feedback..."></textarea>
+            </div>
+
+            <div class="field full">
+                <label><i class="fas fa-comment"></i> Additional Remarks</label>
+                <textarea id="fb_remarks" name="remarks" rows="2" placeholder="Anything else you'd like to share..."></textarea>
+            </div>
+
+            <button type="submit" id="fb_submitBtn" class="btn-success">
+                <i class="fas fa-paper-plane"></i> Submit Feedback
+            </button>
+        </form>
+
+        <!-- ========== PAID REGISTRATION FORM (HIDDEN BY DEFAULT) ========== -->
+        <form id="paidForm" class="hidden-form">
+            <div class="form-header">
+                <h2><i class="fas fa-ticket-alt"></i> Seminar Registration</h2>
+                <p class="form-subtitle">Secure Payment • ₹1 • Instant Confirmation</p>
+            </div>
+
+            <!-- User Details Section (Same as Feedback) -->
+            <div class="section-title"><i class="fas fa-user-circle"></i> Your Details</div>
+            
+            <div class="form-row">
+                <div class="field">
+                    <label><i class="fas fa-user"></i> Name <span class="req">*</span></label>
+                    <input type="text" id="name" name="name" placeholder="Your Full Name" required autocomplete="name">
+                </div>
+                <div class="field">
+                    <label><i class="fas fa-briefcase"></i> Designation <span class="req">*</span></label>
+                    <input type="text" id="designation" name="designation" placeholder="e.g., Manager" required autocomplete="organization-title">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="field">
+                    <label><i class="fas fa-building"></i> Company <span class="req">*</span></label>
+                    <input type="text" id="company" name="company" placeholder="Your Company" required autocomplete="organization">
+                </div>
+                <div class="field">
+                    <label><i class="fas fa-users"></i> Employees</label>
+                    <select id="employees" name="employees" autocomplete="off">
+                        <option value="">Select</option>
+                        <option value="1-10">1-10</option>
+                        <option value="11-50">11-50</option>
+                        <option value="51-200">51-200</option>
+                        <option value="200+">200+</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="field">
+                    <label><i class="fas fa-phone"></i> Contact <span class="req">*</span></label>
+                    <input type="tel" id="phone" name="phone" placeholder="9876543210" pattern="[0-9]{10}" required autocomplete="tel">
+                </div>
+                <div class="field">
+                    <label><i class="fas fa-envelope"></i> Email <span class="req">*</span></label>
+                    <input type="email" id="email" name="email" placeholder="you@email.com" required autocomplete="email">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="field">
+                    <label><i class="fas fa-city"></i> City <span class="req">*</span></label>
+                    <input type="text" id="city" name="city" placeholder="Your City" required autocomplete="address-level2">
+                </div>
+            </div>
+
+            <!-- Payment Card Section -->
             <div class="payment-card">
                 <div class="price">
                     <span class="label">Registration Fee</span>
@@ -106,11 +216,15 @@
 
                 <p id="paymentStatus" class="status">⏳ Payment: <b>Pending</b></p>
                 
-                <!-- ✅ FIXED: Using anchor tag for Razorpay Pages compatibility -->
                 <a href="https://rzp.io/rzp/5NCrTAI" id="payBtn" class="btn-primary" aria-label="Pay ₹1 via Razorpay">
                     <i class="fas fa-rupee-sign"></i> Pay ₹1 Securely
                 </a>
                 <p class="payment-hint"><small>🔒 You'll be redirected to Razorpay for payment</small></p>
+            </div>
+
+            <div class="field full">
+                <label><i class="fas fa-comment"></i> Remarks (Optional)</label>
+                <textarea id="remarks" name="remarks" rows="2" placeholder="Any special requirements..."></textarea>
             </div>
 
             <button type="submit" id="submitBtn" class="btn-success" disabled>
@@ -118,21 +232,22 @@
             </button>
         </form>
 
-        <!-- Success Screen -->
+        <!-- ========== SUCCESS SCREEN (Shared) ========== -->
         <div id="successMsg" class="success hidden">
             <div class="success-icon"><i class="fas fa-check-circle"></i></div>
-            <h2>✅ Registration Successful!</h2>
+            <h2 id="successTitle">✅ Submission Successful!</h2>
             <p>Thank you, <span id="sName"></span>!</p>
             <p class="conf">Confirmation sent to: <span id="sEmail"></span></p>
             <div class="receipt">
+                <p><b>Type:</b> <span id="sType"></span></p>
                 <p><b>Amount:</b> <span id="sAmount"></span></p>
                 <p><b>Time:</b> <span id="sTime"></span></p>
-                <p><b>Payment ID:</b> <span id="sPaymentId"></span></p>
-                <p><b>Status:</b> <span id="sStatus" style="color:var(--success)">Paid</span></p>
+                <p id="paymentIdRow"><b>Payment ID:</b> <span id="sPaymentId"></span></p>
+                <p><b>Status:</b> <span id="sStatus" style="color:var(--success)">Completed</span></p>
             </div>
             <button onclick="window.print()" class="btn-outline"><i class="fas fa-print"></i> Print Receipt</button>
-            <button onclick="location.reload()" class="btn-primary" style="margin-top:10px">
-                <i class="fas fa-redo"></i> New Registration
+            <button onclick="resetAll()" class="btn-primary" style="margin-top:10px">
+                <i class="fas fa-redo"></i> New Submission
             </button>
         </div>
 
