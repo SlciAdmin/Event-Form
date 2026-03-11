@@ -1,597 +1,623 @@
 /**
  * Event Registration System - FULLY WORKING
  * Feedback + Audit with Razorpay Payment
+ * ✅ Auto Excel Save + Form Restore After Payment
  */
 
 const CONFIG = {
-  PAYMENT_LINK: "https://rzp.io/rzp/5NCrTAI",
-  AMOUNT: 100,
-  CURRENCY: "INR",
-  GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbywqI8MUkRrIMi-VsYADWO05KtCJOMCaeZAp8s7FuBEbIi3W2JSfFFkVISO8Yg-XNgg/exec",
-  RETURN_URL: window.location.href.split('?')[0],
-  DEBUG: true
+    PAYMENT_LINK: "https://rzp.io/rzp/5NCrTAI",
+    AMOUNT: 100,
+    CURRENCY: "INR",
+    GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbywqI8MUkRrIMi-VsYADWO05KtCJOMCaeZAp8s7FuBEbIi3W2JSfFFkVISO8Yg-XNgg/exec",
+    RETURN_URL: "https://slciadmin.github.io/Event-Form/",  // ✅ Updated URL
+    DEBUG: true
 };
 
 let paymentDone = false;
 let currentView = 'landing';
 let isSubmitting = false;
 let paymentData = {
-  razorpay_payment_id: "",
-  razorpay_order_id: "",
-  razorpay_signature: "",
-  payment_link_id: "IRE79PZ"
+    razorpay_payment_id: "",
+    razorpay_order_id: "",
+    razorpay_signature: "",
+    payment_link_id: "IRE79PZ"
 };
 
 const $ = id => document.getElementById(id);
 const $$ = (sel, ctx = document) => ctx.querySelectorAll(sel);
 
 function debug(msg, data = null) {
-  if (CONFIG.DEBUG) {
-    console.log(`[💳 ${new Date().toLocaleTimeString()}] ${msg}`, data || '');
-  }
+    if (CONFIG.DEBUG) {
+        console.log(`[💳 ${new Date().toLocaleTimeString()}] ${msg}`, data || '');
+    }
 }
 
 function showView(viewName) {
-  currentView = viewName;
-  
-  $('landingPage')?.classList.add('hidden');
-  $('landingPage')?.classList.remove('active-form');
-  $('feedbackForm')?.classList.add('hidden-form');
-  $('feedbackForm')?.classList.remove('active-form');
-  $('paidForm')?.classList.add('hidden-form');
-  $('paidForm')?.classList.remove('active-form');
-  $('successMsg')?.classList.add('hidden');
-  $('successMsg')?.classList.remove('active-form');
+    currentView = viewName;
+    
+    $('landingPage')?.classList.add('hidden');
+    $('landingPage')?.classList.remove('active-form');
+    $('feedbackForm')?.classList.add('hidden-form');
+    $('feedbackForm')?.classList.remove('active-form');
+    $('paidForm')?.classList.add('hidden-form');
+    $('paidForm')?.classList.remove('active-form');
+    $('successMsg')?.classList.add('hidden');
+    $('successMsg')?.classList.remove('active-form');
 
-  switch(viewName) {
-    case 'landing':
-      $('landingPage')?.classList.remove('hidden');
-      $('landingPage')?.classList.add('active-form');
-      break;
-    case 'feedback':
-      $('feedbackForm')?.classList.remove('hidden-form');
-      $('feedbackForm')?.classList.add('active-form');
-      break;
-    case 'paid':
-      $('paidForm')?.classList.remove('hidden-form');
-      $('paidForm')?.classList.add('active-form');
-      break;
-    case 'success':
-      $('successMsg')?.classList.remove('hidden');
-      $('successMsg')?.classList.add('active-form');
-      break;
-  }
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+    switch(viewName) {
+        case 'landing':
+            $('landingPage')?.classList.remove('hidden');
+            $('landingPage')?.classList.add('active-form');
+            break;
+        case 'feedback':
+            $('feedbackForm')?.classList.remove('hidden-form');
+            $('feedbackForm')?.classList.add('active-form');
+            break;
+        case 'paid':
+            $('paidForm')?.classList.remove('hidden-form');
+            $('paidForm')?.classList.add('active-form');
+            break;
+        case 'success':
+            $('successMsg')?.classList.remove('hidden');
+            $('successMsg')?.classList.add('active-form');
+            break;
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function backToLanding() {
-  showView('landing');
+    showView('landing');
 }
 
+// 🔥 ENHANCED: handlePaymentReturn with Form Restore + Auto Submit
 function handlePaymentReturn() {
-  debug('🔍 Checking payment return...');
-  const urlParams = new URLSearchParams(window.location.search);
-  const paymentId = urlParams.get('razorpay_payment_id');
-  const status = urlParams.get('razorpay_payment_status');
-  const orderId = urlParams.get('razorpay_order_id');
-  const error = urlParams.get('razorpay_error');
+    debug('🔍 Checking payment return...');
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentId = urlParams.get('razorpay_payment_id');
+    const status = urlParams.get('razorpay_payment_status');
+    const orderId = urlParams.get('razorpay_order_id');
+    const error = urlParams.get('razorpay_error');
 
-  if (paymentId && status === 'captured') {
-    debug('✅ Payment captured!', { paymentId, orderId });
-    paymentDone = true;
-    paymentData.razorpay_payment_id = paymentId;
-    paymentData.razorpay_order_id = orderId || 'N/A';
-
-    try {
-      sessionStorage.setItem('paymentData', JSON.stringify(paymentData));
-    } catch (e) {
-      debug('⚠️ Session storage failed', e);
-    }
-
-    if (window.history.replaceState) {
-      window.history.replaceState({}, document.title, CONFIG.RETURN_URL);
-    }
-
-    updatePaymentUI(true);
-    const submitBtn = $('submitBtn');
-    if (submitBtn) {
-      submitBtn.disabled = false;
-      debug('✅ Submit button enabled');
-    }
-
-    // Auto-submit after 1 second
-    setTimeout(() => {
-      if (validatePaidForm()) {
-        debug('🔄 Auto-submitting paid form after payment...');
-        handlePaidSubmit(null, true);
-      }
-    }, 1000);
-
-    return true;
-  }
-
-  if (error || (status && status !== 'captured')) {
-    debug('❌ Payment failed/cancelled', { error, status });
-    showToast(`⚠️ Payment ${error ? 'Failed' : 'Cancelled'}. Please try again.`, 'warning');
-    resetPaymentUI();
-    if (window.history.replaceState) {
-      window.history.replaceState({}, document.title, CONFIG.RETURN_URL);
-    }
-    return false;
-  }
-
-  debug('ℹ️ No payment parameters');
-  return false;
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  debug('🚀 DOM Content Loaded');
-  showView('landing');
-
-  $('showFeedbackBtn')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    debug('🖱️ Feedback button clicked');
-    showView('feedback');
-    initFeedbackForm();
-  });
-
-  $('showPaidBtn')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    debug('🖱️ Audit button clicked');
-    showView('paid');
-    initPaidForm();
-  });
-
-  initFeedbackForm();
-  initPaidForm();
-  
-  // Check for payment return on page load
-  handlePaymentReturn();
-});
-
-function initFeedbackForm() {
-  const form = $('feedbackForm');
-  if (!form) return;
-
-  const newForm = form.cloneNode(true);
-  form.parentNode.replaceChild(newForm, form);
-
-  initStarRating('fb_starRating');
-
-  ['fb_name', 'fb_email', 'fb_phone', 'fb_city', 'fb_employees', 'fb_designation', 'fb_company'].forEach(id => {
-    const field = $(id);
-    if (field) {
-      field.addEventListener('blur', () => validateField(field, 'feedback'));
-      field.addEventListener('input', () => {
-        if (field.style.borderColor === 'var(--danger)') {
-          field.style.borderColor = '';
-          field.removeAttribute('aria-invalid');
-        }
-      });
-    }
-  });
-
-  newForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    if (!isSubmitting) {
-      handleFeedbackSubmit();
-    }
-  });
-
-  debug('✅ Feedback Form initialized');
-}
-
-function initPaidForm() {
-  const form = $('paidForm');
-  if (!form) return;
-
-  const newForm = form.cloneNode(true);
-  form.parentNode.replaceChild(newForm, form);
-
-  // Check for saved payment
-  const savedPayment = sessionStorage.getItem('paymentData');
-  if (savedPayment && currentView === 'paid') {
-    try {
-      paymentData = JSON.parse(savedPayment);
-      if (paymentData.razorpay_payment_id) {
+    // ✅ PAYMENT SUCCESSFUL
+    if (paymentId && status === 'captured') {
+        debug('✅ Payment captured!', { paymentId, orderId });
         paymentDone = true;
+        paymentData.razorpay_payment_id = paymentId;
+        paymentData.razorpay_order_id = orderId || 'N/A';
+        
+        try {
+            sessionStorage.setItem('paymentData', JSON.stringify(paymentData));
+        } catch (e) { debug('⚠️ Session storage failed', e); }
+
+        // URL clean karein (parameters hata dein)
+        if (window.history.replaceState) {
+            const cleanUrl = window.location.pathname;
+            window.history.replaceState({}, document.title, cleanUrl);
+        }
+
         updatePaymentUI(true);
         const submitBtn = $('submitBtn');
         if (submitBtn) submitBtn.disabled = false;
-        debug('🔄 Payment state restored');
-      }
-    } catch (e) {
-      debug('⚠️ Failed to parse payment data', e);
-    }
-  }
 
-  const payBtn = $('payBtn');
-  if (payBtn) {
-    payBtn.addEventListener('click', (e) => {
-      if (!validatePaidForm()) {
-        e.preventDefault();
-        showToast('Please fill all required fields before payment', 'error');
-        return false;
-      }
-
-      try {
-        const formData = collectPaidFormData();
-        sessionStorage.setItem('tempPaidData', JSON.stringify(formData));
-        debug('💾 Form data saved to session');
-      } catch (err) {
-        debug('⚠️ Failed to save temp data', err);
-      }
-
-      debug('🔗 Redirecting to Razorpay...');
-      return true;
-    });
-  }
-
-  newForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    if (!isSubmitting && paymentDone) {
-      handlePaidSubmit();
-    } else if (!paymentDone) {
-      showToast('⚠️ Please complete payment first', 'error');
-    }
-  });
-
-  ['name', 'email', 'phone', 'city', 'employees', 'designation', 'company'].forEach(id => {
-    const field = $(id);
-    if (field) {
-      field.addEventListener('blur', () => validateField(field, 'paid'));
-      field.addEventListener('input', () => {
-        if (field.style.borderColor === 'var(--danger)') {
-          field.style.borderColor = '';
-          field.removeAttribute('aria-invalid');
+        // 🔥 FORM DATA RESTORE KAREIN (Sabse Important)
+        const savedFormData = sessionStorage.getItem('tempPaidData');
+        if (savedFormData && currentView === 'paid') {
+            try {
+                const formData = JSON.parse(savedFormData);
+                // Fields ko wapas fill karein
+                if($('name')) $('name').value = formData.name || '';
+                if($('email')) $('email').value = formData.email || '';
+                if($('phone')) $('phone').value = formData.phone || '';
+                if($('company')) $('company').value = formData.company || '';
+                if($('designation')) $('designation').value = formData.designation || '';
+                if($('city')) $('city').value = formData.city || '';
+                if($('employees')) $('employees').value = formData.employees || '';
+                if($('remarks')) $('remarks').value = formData.remarks || '';
+                
+                // Rating restore karein
+                if(formData.audit_rating) {
+                    const ratingRadio = document.querySelector(`input[name="audit_rating"][value="${formData.audit_rating}"]`);
+                    if(ratingRadio) ratingRadio.checked = true;
+                }
+                debug('🔄 Form data restored from session');
+            } catch (e) { debug('⚠️ Failed to restore form data', e); }
         }
-      });
-    }
-  });
 
-  initStarRating('audit_starRating');
-  debug('✅ Paid Form initialized');
+        // 🔥 Auto-submit trigger karein (2 second baad taaki UI render ho jaye)
+        setTimeout(() => {
+            if (validatePaidForm()) {
+                debug('🔄 Auto-submitting paid form after payment...');
+                handlePaidSubmit(null, true);  // ✅ Ye Google Sheet mein data bhejega
+            } else {
+                showToast('⚠️ Payment successful, please check form fields', 'warning');
+            }
+        }, 2000);
+        return true;
+    }
+
+    // ❌ PAYMENT FAILED/CANCELLED
+    if (error || (status && status !== 'captured')) {
+        debug('❌ Payment failed/cancelled', { error, status });
+        showToast(`⚠️ Payment ${error ? 'Failed' : 'Cancelled'}. Please try again.`, 'warning');
+        resetPaymentUI();
+        if (window.history.replaceState) {
+            const cleanUrl = window.location.pathname;
+            window.history.replaceState({}, document.title, cleanUrl);
+        }
+        return false;
+    }
+    debug('ℹ️ No payment parameters');
+    return false;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    debug('🚀 DOM Content Loaded');
+    showView('landing');
+
+    $('showFeedbackBtn')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        debug('🖱️ Feedback button clicked');
+        showView('feedback');
+        initFeedbackForm();
+    });
+
+    $('showPaidBtn')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        debug('🖱️ Audit button clicked');
+        showView('paid');
+        initPaidForm();
+    });
+
+    initFeedbackForm();
+    initPaidForm();
+    
+    // ✅ Check for payment return on page load
+    handlePaymentReturn();
+});
+
+function initFeedbackForm() {
+    const form = $('feedbackForm');
+    if (!form) return;
+
+    const newForm = form.cloneNode(true);
+    form.parentNode.replaceChild(newForm, form);
+
+    initStarRating('fb_starRating');
+
+    ['fb_name', 'fb_email', 'fb_phone', 'fb_city', 'fb_employees', 'fb_designation', 'fb_company'].forEach(id => {
+        const field = $(id);
+        if (field) {
+            field.addEventListener('blur', () => validateField(field, 'feedback'));
+            field.addEventListener('input', () => {
+                if (field.style.borderColor === 'var(--danger)') {
+                    field.style.borderColor = '';
+                    field.removeAttribute('aria-invalid');
+                }
+            });
+        }
+    });
+
+    newForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (!isSubmitting) {
+            handleFeedbackSubmit();
+        }
+    });
+
+    debug('✅ Feedback Form initialized');
+}
+
+function initPaidForm() {
+    const form = $('paidForm');
+    if (!form) return;
+
+    const newForm = form.cloneNode(true);
+    form.parentNode.replaceChild(newForm, form);
+
+    // Check for saved payment
+    const savedPayment = sessionStorage.getItem('paymentData');
+    if (savedPayment && currentView === 'paid') {
+        try {
+            paymentData = JSON.parse(savedPayment);
+            if (paymentData.razorpay_payment_id) {
+                paymentDone = true;
+                updatePaymentUI(true);
+                const submitBtn = $('submitBtn');
+                if (submitBtn) submitBtn.disabled = false;
+                debug('🔄 Payment state restored');
+            }
+        } catch (e) {
+            debug('⚠️ Failed to parse payment data', e);
+        }
+    }
+
+    const payBtn = $('payBtn');
+    if (payBtn) {
+        payBtn.addEventListener('click', (e) => {
+            if (!validatePaidForm()) {
+                e.preventDefault();
+                showToast('Please fill all required fields before payment', 'error');
+                return false;
+            }
+
+            try {
+                const formData = collectPaidFormData();
+                sessionStorage.setItem('tempPaidData', JSON.stringify(formData));  // ✅ Form data save before redirect
+                debug('💾 Form data saved to session');
+            } catch (err) {
+                debug('⚠️ Failed to save temp data', err);
+            }
+
+            debug('🔗 Redirecting to Razorpay...');
+            return true;
+        });
+    }
+
+    newForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (!isSubmitting && paymentDone) {
+            handlePaidSubmit();
+        } else if (!paymentDone) {
+            showToast('⚠️ Please complete payment first', 'error');
+        }
+    });
+
+    ['name', 'email', 'phone', 'city', 'employees', 'designation', 'company'].forEach(id => {
+        const field = $(id);
+        if (field) {
+            field.addEventListener('blur', () => validateField(field, 'paid'));
+            field.addEventListener('input', () => {
+                if (field.style.borderColor === 'var(--danger)') {
+                    field.style.borderColor = '';
+                    field.removeAttribute('aria-invalid');
+                }
+            });
+        }
+    });
+
+    initStarRating('audit_starRating');
+    debug('✅ Paid Form initialized');
 }
 
 function validateField(field, formType) {
-  if (!field) return false;
-  const value = field.value.trim();
-  let isValid = true;
+    if (!field) return false;
+    const value = field.value.trim();
+    let isValid = true;
 
-  if (field.required && !value) {
-    markInvalid(field);
-    isValid = false;
-  }
-
-  if (field.type === 'email' && value) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(value)) {
-      markInvalid(field);
-      showToast('Please enter a valid email address', 'error');
-      isValid = false;
+    if (field.required && !value) {
+        markInvalid(field);
+        isValid = false;
     }
-  }
 
-  if (field.type === 'tel' && value) {
-    const phoneRegex = /^[6-9][0-9]{9}$/;
-    if (!phoneRegex.test(value)) {
-      markInvalid(field);
-      showToast('Please enter a valid 10-digit mobile number', 'error');
-      isValid = false;
+    if (field.type === 'email' && value) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(value)) {
+            markInvalid(field);
+            showToast('Please enter a valid email address', 'error');
+            isValid = false;
+        }
     }
-  }
 
-  if (field.type === 'number' && value) {
-    if (isNaN(value) || value < 1) {
-      markInvalid(field);
-      showToast('Please enter a valid number', 'error');
-      isValid = false;
+    if (field.type === 'tel' && value) {
+        const phoneRegex = /^[6-9][0-9]{9}$/;
+        if (!phoneRegex.test(value)) {
+            markInvalid(field);
+            showToast('Please enter a valid 10-digit mobile number', 'error');
+            isValid = false;
+        }
     }
-  }
 
-  if (isValid) {
-    field.style.borderColor = '';
-    field.removeAttribute('aria-invalid');
-  }
+    if (field.type === 'number' && value) {
+        if (isNaN(value) || value < 1) {
+            markInvalid(field);
+            showToast('Please enter a valid number', 'error');
+            isValid = false;
+        }
+    }
 
-  return isValid;
+    if (isValid) {
+        field.style.borderColor = '';
+        field.removeAttribute('aria-invalid');
+    }
+
+    return isValid;
 }
 
 function validateFeedbackForm() {
-  let isValid = true;
-  const requiredFields = ['fb_name', 'fb_designation', 'fb_company', 'fb_phone', 'fb_email', 'fb_city', 'fb_employees'];
-  
-  requiredFields.forEach(id => {
-    const field = $(id);
-    if (field && !validateField(field, 'feedback')) {
-      isValid = false;
+    let isValid = true;
+    const requiredFields = ['fb_name', 'fb_designation', 'fb_company', 'fb_phone', 'fb_email', 'fb_city', 'fb_employees'];
+    
+    requiredFields.forEach(id => {
+        const field = $(id);
+        if (field && !validateField(field, 'feedback')) {
+            isValid = false;
+        }
+    });
+
+    const rating = document.querySelector('input[name="fb_rating"]:checked');
+    if (!rating) {
+        showToast('Please select a session rating', 'error');
+        const ratingContainer = $('fb_starRating');
+        if (ratingContainer) ratingContainer.style.borderColor = 'var(--danger)';
+        isValid = false;
+    } else {
+        const ratingContainer = $('fb_starRating');
+        if (ratingContainer) ratingContainer.style.borderColor = '';
     }
-  });
 
-  const rating = document.querySelector('input[name="fb_rating"]:checked');
-  if (!rating) {
-    showToast('Please select a session rating', 'error');
-    const ratingContainer = $('fb_starRating');
-    if (ratingContainer) ratingContainer.style.borderColor = 'var(--danger)';
-    isValid = false;
-  } else {
-    const ratingContainer = $('fb_starRating');
-    if (ratingContainer) ratingContainer.style.borderColor = '';
-  }
-
-  return isValid;
+    return isValid;
 }
 
 function validatePaidForm() {
-  let isValid = true;
-  const requiredFields = ['name', 'designation', 'company', 'phone', 'email', 'city', 'employees'];
-  
-  requiredFields.forEach(id => {
-    const field = $(id);
-    if (field && !validateField(field, 'paid')) {
-      isValid = false;
+    let isValid = true;
+    const requiredFields = ['name', 'designation', 'company', 'phone', 'email', 'city', 'employees'];
+    
+    requiredFields.forEach(id => {
+        const field = $(id);
+        if (field && !validateField(field, 'paid')) {
+            isValid = false;
+        }
+    });
+
+    const auditRating = document.querySelector('input[name="audit_rating"]:checked');
+    if (!auditRating) {
+        showToast('Please select an experience rating', 'error');
+        const ratingContainer = $('audit_starRating');
+        if (ratingContainer) ratingContainer.style.borderColor = 'var(--danger)';
+        isValid = false;
+    } else {
+        const ratingContainer = $('audit_starRating');
+        if (ratingContainer) ratingContainer.style.borderColor = '';
     }
-  });
 
-  const auditRating = document.querySelector('input[name="audit_rating"]:checked');
-  if (!auditRating) {
-    showToast('Please select an experience rating', 'error');
-    const ratingContainer = $('audit_starRating');
-    if (ratingContainer) ratingContainer.style.borderColor = 'var(--danger)';
-    isValid = false;
-  } else {
-    const ratingContainer = $('audit_starRating');
-    if (ratingContainer) ratingContainer.style.borderColor = '';
-  }
-
-  return isValid;
+    return isValid;
 }
 
 function markInvalid(field) {
-  if (!field) return;
-  field.style.borderColor = 'var(--danger)';
-  field.setAttribute('aria-invalid', 'true');
-  field.style.animation = 'none';
-  setTimeout(() => {
-    field.style.animation = 'shake 0.3s ease';
-  }, 10);
+    if (!field) return;
+    field.style.borderColor = 'var(--danger)';
+    field.setAttribute('aria-invalid', 'true');
+    field.style.animation = 'none';
+    setTimeout(() => {
+        field.style.animation = 'shake 0.3s ease';
+    }, 10);
 }
 
 async function handleFeedbackSubmit() {
-  debug('📤 Feedback submission triggered');
+    debug('📤 Feedback submission triggered');
 
-  if (isSubmitting) {
-    debug('⚠️ Already submitting - ignoring');
-    return;
-  }
+    if (isSubmitting) {
+        debug('⚠️ Already submitting - ignoring');
+        return;
+    }
 
-  if (!validateFeedbackForm()) {
-    showToast('Please fill all required fields correctly', 'error');
-    const firstInvalid = document.querySelector('#feedbackForm [aria-invalid="true"]');
-    if (firstInvalid) firstInvalid.focus();
-    return;
-  }
+    if (!validateFeedbackForm()) {
+        showToast('Please fill all required fields correctly', 'error');
+        const firstInvalid = document.querySelector('#feedbackForm [aria-invalid="true"]');
+        if (firstInvalid) firstInvalid.focus();
+        return;
+    }
 
-  isSubmitting = true;
-  showLoader('Submitting Feedback...');
+    isSubmitting = true;
+    showLoader('Submitting Feedback...');
 
-  try {
-    const data = collectFeedbackData();
-    debug('📦 Feedback data collected', data);
+    try {
+        const data = collectFeedbackData();
+        debug('📦 Feedback data collected', data);
 
-    await submitToGoogleSheets(data, 'feedback');
-    showSuccess(data, 'feedback');
-  } catch (error) {
-    console.error('Feedback error:', error);
-    showToast('⚠️ Feedback saved locally', 'warning');
-    showSuccess(collectFeedbackData(), 'feedback');
-  } finally {
-    hideLoader();
-    isSubmitting = false;
-  }
+        await submitToGoogleSheets(data, 'feedback');  // ✅ Excel/Sheet save
+        showSuccess(data, 'feedback');
+    } catch (error) {
+        console.error('Feedback error:', error);
+        showToast('⚠️ Feedback saved locally', 'warning');
+        showSuccess(collectFeedbackData(), 'feedback');
+    } finally {
+        hideLoader();
+        isSubmitting = false;
+    }
 }
 
 function collectFeedbackData() {
-  const rating = document.querySelector('input[name="fb_rating"]:checked')?.value || 'Not rated';
-  return {
-    name: $('fb_name')?.value.trim() || '',
-    designation: $('fb_designation')?.value.trim() || '',
-    company: $('fb_company')?.value.trim() || '',
-    employees: $('fb_employees')?.value.trim() || '',
-    phone: $('fb_phone')?.value.trim() || '',
-    email: $('fb_email')?.value.trim() || '',
-    city: $('fb_city')?.value.trim() || '',
-    session_rating: rating,
-    remarks: $('fb_remarks')?.value.trim() || 'None',
-    form_type: 'feedback',
-    payment_status: 'Not Applicable',
-    amount: '₹0.00',
-    payment_method: 'None',
-    razorpay_payment_id: 'N/A',
-    timestamp: new Date().toISOString(),
-    user_agent: navigator.userAgent,
-    screen_resolution: `${screen.width}x${screen.height}`
-  };
+    const rating = document.querySelector('input[name="fb_rating"]:checked')?.value || 'Not rated';
+    return {
+        name: $('fb_name')?.value.trim() || '',
+        designation: $('fb_designation')?.value.trim() || '',
+        company: $('fb_company')?.value.trim() || '',
+        employees: $('fb_employees')?.value.trim() || '',
+        phone: $('fb_phone')?.value.trim() || '',
+        email: $('fb_email')?.value.trim() || '',
+        city: $('fb_city')?.value.trim() || '',
+        session_rating: rating,
+        remarks: $('fb_remarks')?.value.trim() || 'None',
+        form_type: 'feedback',
+        payment_status: 'Not Applicable',
+        amount: '₹0.00',
+        payment_method: 'None',
+        razorpay_payment_id: 'N/A',
+        timestamp: new Date().toISOString(),
+        user_agent: navigator.userAgent,
+        screen_resolution: `${screen.width}x${screen.height}`
+    };
 }
 
 function resetFeedbackForm() {
-  const form = $('feedbackForm');
-  if (!form) return;
+    const form = $('feedbackForm');
+    if (!form) return;
 
-  form.querySelectorAll('input, textarea, select').forEach(el => {
-    if (el.type === 'radio' || el.type === 'checkbox') {
-      el.checked = false;
-    } else if (el.tagName === 'SELECT') {
-      el.selectedIndex = 0;
-    } else {
-      el.value = '';
-    }
-    el.style.borderColor = '';
-    el.removeAttribute('aria-invalid');
-  });
+    form.querySelectorAll('input, textarea, select').forEach(el => {
+        if (el.type === 'radio' || el.type === 'checkbox') {
+            el.checked = false;
+        } else if (el.tagName === 'SELECT') {
+            el.selectedIndex = 0;
+        } else {
+            el.value = '';
+        }
+        el.style.borderColor = '';
+        el.removeAttribute('aria-invalid');
+    });
 
-  const ratingContainer = $('fb_starRating');
-  if (ratingContainer) ratingContainer.style.borderColor = '';
-  debug('✅ Feedback form reset');
+    const ratingContainer = $('fb_starRating');
+    if (ratingContainer) ratingContainer.style.borderColor = '';
+    debug('✅ Feedback form reset');
 }
 
 async function handlePaidSubmit(e = null, autoSubmit = false) {
-  if (e) e.preventDefault();
+    if (e) e.preventDefault();
 
-  debug('📤 Paid submission triggered', { autoSubmit });
+    debug('📤 Paid submission triggered', { autoSubmit });
 
-  if (isSubmitting) {
-    debug('⚠️ Already submitting - ignoring');
-    return;
-  }
-
-  if (!paymentDone) {
-    debug('❌ Payment not completed');
-    showToast('⚠️ Please complete the payment first', 'error');
-    $('payBtn')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    return;
-  }
-
-  if (!validatePaidForm()) {
-    showToast('Please fill all required fields correctly', 'error');
-    const firstInvalid = document.querySelector('#paidForm [aria-invalid="true"]');
-    if (firstInvalid) firstInvalid.focus();
-    return;
-  }
-
-  // Restore payment data if needed
-  if (!paymentData.razorpay_payment_id) {
-    try {
-      const saved = sessionStorage.getItem('paymentData');
-      if (saved) {
-        paymentData = JSON.parse(saved);
-      }
-    } catch (err) {
-      debug('⚠️ Failed to restore payment data', err);
+    if (isSubmitting) {
+        debug('⚠️ Already submitting - ignoring');
+        return;
     }
-  }
 
-  if (!paymentData.razorpay_payment_id) {
-    debug('❌ No payment ID');
-    showToast('⚠️ Payment verification failed', 'error');
-    resetPaidForm();
-    return;
-  }
+    if (!paymentDone) {
+        debug('❌ Payment not completed');
+        showToast('⚠️ Please complete the payment first', 'error');
+        $('payBtn')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+    }
 
-  isSubmitting = true;
-  showLoader(autoSubmit ? 'Processing Payment...' : 'Processing Registration...');
+    if (!validatePaidForm()) {
+        showToast('Please fill all required fields correctly', 'error');
+        const firstInvalid = document.querySelector('#paidForm [aria-invalid="true"]');
+        if (firstInvalid) firstInvalid.focus();
+        return;
+    }
 
-  try {
-    const data = collectPaidFormData();
-    debug('📦 Paid data collected', data);
+    // Restore payment data if needed
+    if (!paymentData.razorpay_payment_id) {
+        try {
+            const saved = sessionStorage.getItem('paymentData');
+            if (saved) {
+                paymentData = JSON.parse(saved);
+            }
+        } catch (err) {
+            debug('⚠️ Failed to restore payment data', err);
+        }
+    }
 
-    await submitToGoogleSheets(data, 'audit');
-    showSuccess(data, 'paid');
-    
-    // Clear session after successful submission
-    sessionStorage.removeItem('paymentData');
-    sessionStorage.removeItem('tempPaidData');
-    
-  } catch (error) {
-    console.error('Paid submission error:', error);
-    showToast('⚠️ Registration saved', 'warning');
-    showSuccess(collectPaidFormData(), 'paid');
-  } finally {
-    hideLoader();
-    isSubmitting = false;
-  }
+    if (!paymentData.razorpay_payment_id) {
+        debug('❌ No payment ID');
+        showToast('⚠️ Payment verification failed', 'error');
+        resetPaidForm();
+        return;
+    }
+
+    isSubmitting = true;
+    showLoader(autoSubmit ? 'Processing Payment...' : 'Processing Registration...');
+
+    try {
+        const data = collectPaidFormData();
+        debug('📦 Paid data collected', data);
+
+        await submitToGoogleSheets(data, 'audit');  // ✅ EXCEL/GOOGLE SHEET SAVE HERE
+        showSuccess(data, 'paid');
+        
+        // Clear session after successful submission
+        sessionStorage.removeItem('paymentData');
+        sessionStorage.removeItem('tempPaidData');
+        
+    } catch (error) {
+        console.error('Paid submission error:', error);
+        showToast('⚠️ Registration saved locally', 'warning');
+        showSuccess(collectPaidFormData(), 'paid');
+    } finally {
+        hideLoader();
+        isSubmitting = false;
+    }
 }
 
 function collectPaidFormData() {
-  const auditRating = document.querySelector('input[name="audit_rating"]:checked')?.value || 'Not rated';
-  return {
-    name: $('name')?.value.trim() || '',
-    designation: $('designation')?.value.trim() || '',
-    company: $('company')?.value.trim() || '',
-    employees: $('employees')?.value.trim() || '',
-    phone: $('phone')?.value.trim() || '',
-    email: $('email')?.value.trim() || '',
-    city: $('city')?.value.trim() || '',
-    audit_rating: auditRating,
-    remarks: $('remarks')?.value.trim() || 'None',
-    form_type: 'paid_registration',
-    payment_status: 'Paid',
-    amount: '₹1.00',
-    payment_method: 'Razorpay',
-    razorpay_payment_id: paymentData.razorpay_payment_id || 'PENDING',
-    razorpay_order_id: paymentData.razorpay_order_id || 'N/A',
-    razorpay_signature: paymentData.razorpay_signature || 'N/A',
-    payment_link_id: paymentData.payment_link_id || 'IRE79PZ',
-    timestamp: new Date().toISOString(),
-    user_agent: navigator.userAgent,
-    screen_resolution: `${screen.width}x${screen.height}`,
-    return_url: CONFIG.RETURN_URL
-  };
+    const auditRating = document.querySelector('input[name="audit_rating"]:checked')?.value || 'Not rated';
+    return {
+        name: $('name')?.value.trim() || '',
+        designation: $('designation')?.value.trim() || '',
+        company: $('company')?.value.trim() || '',
+        employees: $('employees')?.value.trim() || '',
+        phone: $('phone')?.value.trim() || '',
+        email: $('email')?.value.trim() || '',
+        city: $('city')?.value.trim() || '',
+        audit_rating: auditRating,
+        remarks: $('remarks')?.value.trim() || 'None',
+        form_type: 'paid_registration',
+        payment_status: 'Paid',
+        amount: '₹1.00',
+        payment_method: 'Razorpay',
+        razorpay_payment_id: paymentData.razorpay_payment_id || 'PENDING',
+        razorpay_order_id: paymentData.razorpay_order_id || 'N/A',
+        razorpay_signature: paymentData.razorpay_signature || 'N/A',
+        payment_link_id: paymentData.payment_link_id || 'IRE79PZ',
+        timestamp: new Date().toISOString(),
+        user_agent: navigator.userAgent,
+        screen_resolution: `${screen.width}x${screen.height}`,
+        return_url: CONFIG.RETURN_URL
+    };
 }
 
 function resetPaidForm() {
-  const form = $('paidForm');
-  if (!form) return;
+    const form = $('paidForm');
+    if (!form) return;
 
-  form.querySelectorAll('input, textarea, select').forEach(el => {
-    if (el.type === 'radio' || el.type === 'checkbox') {
-      el.checked = false;
-    } else if (el.tagName === 'SELECT') {
-      el.selectedIndex = 0;
-    } else {
-      el.value = '';
+    form.querySelectorAll('input, textarea, select').forEach(el => {
+        if (el.type === 'radio' || el.type === 'checkbox') {
+            el.checked = false;
+        } else if (el.tagName === 'SELECT') {
+            el.selectedIndex = 0;
+        } else {
+            el.value = '';
+        }
+        el.style.borderColor = '';
+        el.removeAttribute('aria-invalid');
+    });
+
+    resetPaymentUI();
+
+    paymentDone = false;
+    paymentData = {
+        razorpay_payment_id: "",
+        razorpay_order_id: "",
+        razorpay_signature: "",
+        payment_link_id: "IRE79PZ"
+    };
+
+    try {
+        sessionStorage.removeItem('paymentData');
+        sessionStorage.removeItem('tempPaidData');
+    } catch (e) {
+        debug('⚠️ Session cleanup failed', e);
     }
-    el.style.borderColor = '';
-    el.removeAttribute('aria-invalid');
-  });
 
-  resetPaymentUI();
-
-  paymentDone = false;
-  paymentData = {
-    razorpay_payment_id: "",
-    razorpay_order_id: "",
-    razorpay_signature: "",
-    payment_link_id: "IRE79PZ"
-  };
-
-  try {
-    sessionStorage.removeItem('paymentData');
-    sessionStorage.removeItem('tempPaidData');
-  } catch (e) {
-    debug('⚠️ Session cleanup failed', e);
-  }
-
-  debug('✅ Paid form reset');
+    debug('✅ Paid form reset');
 }
 
 async function submitToGoogleSheets(data, formType) {
-  if (!CONFIG.GOOGLE_SCRIPT || CONFIG.GOOGLE_SCRIPT.includes('YOUR_')) {
-    debug('📋 Demo mode: Google Script not configured');
-    return true;
-  }
+    if (!CONFIG.GOOGLE_SCRIPT || CONFIG.GOOGLE_SCRIPT.includes('YOUR_')) {
+        debug('📋 Demo mode: Google Script not configured');
+        return true;
+    }
 
-  debug(`📤 Sending ${formType} data to Google Sheets...`);
+    debug(`📤 Sending ${formType} data to Google Sheets...`);
 
-  try {
-    const response = await fetch(CONFIG.GOOGLE_SCRIPT, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
+    try {
+        const response = await fetch(CONFIG.GOOGLE_SCRIPT, {
+            method: 'POST',
+            mode: 'no-cors',  // ✅ CORS bypass for Google Apps Script
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
 
-    debug(`✅ ${formType} data sent successfully`);
-    return true;
-  } catch (error) {
-    console.error(`Google Sheets error (${formType}):`, error);
-    debug(`❌ Error:`, error);
-    throw error;
-  }
+        debug(`✅ ${formType} data sent successfully`);
+        return true;
+    } catch (error) {
+        console.error(`Google Sheets error (${formType}):`, error);
+        debug(`❌ Error:`, error);
+        throw error;
+    }
 }
 
 function showSuccess(data, formType) {
-    // 1. Hide Both Forms Immediately
+    // Hide Both Forms Immediately
     $('feedbackForm')?.classList.add('hidden-form');
     $('paidForm')?.classList.add('hidden-form');
     $('landingPage')?.classList.add('hidden');
@@ -599,10 +625,10 @@ function showSuccess(data, formType) {
     const successMsg = $('successMsg');
     if (!successMsg) return;
 
-    // 2. Show Success Container
+    // Show Success Container
     successMsg.classList.remove('hidden');
 
-    // 3. FEEDBACK - Minimal Message (No Receipt Details)
+    // FEEDBACK - Minimal Message
     if (formType === 'feedback') {
         successMsg.innerHTML = `
             <div class="success-icon" style="font-size:4rem; color:var(--success); margin-bottom:15px">
@@ -618,9 +644,8 @@ function showSuccess(data, formType) {
         `;
         debug('🎉 Minimal success screen for feedback');
     } 
-    // 4. PAID/AUDIT - Full Receipt (Keep existing logic for Paid)
+    // PAID/AUDIT - Full Receipt
     else {
-        // ... (Keep your existing Paid receipt logic here) ...
         const mappings = {
             sName: data.name,
             sEmail: data.email,
@@ -653,190 +678,190 @@ function showSuccess(data, formType) {
 }
 
 function updatePaymentUI(paid) {
-  const paymentStatus = $('paymentStatus');
-  const payBtn = $('payBtn');
-  const submitBtn = $('submitBtn');
+    const paymentStatus = $('paymentStatus');
+    const payBtn = $('payBtn');
+    const submitBtn = $('submitBtn');
 
-  if (!paymentStatus || !payBtn) return;
+    if (!paymentStatus || !payBtn) return;
 
-  if (paid) {
-    paymentStatus.innerHTML = '✅ Payment: <b style="color:var(--success)">Completed</b>';
-    paymentStatus.classList.add('paid');
-    payBtn.innerHTML = '<i class="fas fa-check"></i> Payment Successful';
-    payBtn.style.background = 'linear-gradient(135deg, var(--success), var(--success-dark))';
-    payBtn.style.pointerEvents = 'none';
-    payBtn.setAttribute('aria-disabled', 'true');
-    payBtn.setAttribute('tabindex', '-1');
+    if (paid) {
+        paymentStatus.innerHTML = '✅ Payment: <b style="color:var(--success)">Completed</b>';
+        paymentStatus.classList.add('paid');
+        payBtn.innerHTML = '<i class="fas fa-check"></i> Payment Successful';
+        payBtn.style.background = 'linear-gradient(135deg, var(--success), var(--success-dark))';
+        payBtn.style.pointerEvents = 'none';
+        payBtn.setAttribute('aria-disabled', 'true');
+        payBtn.setAttribute('tabindex', '-1');
 
-    if (submitBtn) {
-      submitBtn.disabled = false;
-      submitBtn.focus();
-      debug('✅ Submit button enabled after payment');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.focus();
+            debug('✅ Submit button enabled after payment');
+        }
+
+        debug('🎨 Payment UI: Paid state');
     }
-
-    debug('🎨 Payment UI: Paid state');
-  }
 }
 
 function resetPaymentUI() {
-  const paymentStatus = $('paymentStatus');
-  const payBtn = $('payBtn');
-  const submitBtn = $('submitBtn');
+    const paymentStatus = $('paymentStatus');
+    const payBtn = $('payBtn');
+    const submitBtn = $('submitBtn');
 
-  if (!paymentStatus || !payBtn) return;
+    if (!paymentStatus || !payBtn) return;
 
-  paymentStatus.innerHTML = '⏳ Payment: <b>Pending</b>';
-  paymentStatus.classList.remove('paid');
-  payBtn.innerHTML = '<i class="fas fa-rupee-sign"></i> Pay ₹999 Securely';
-  payBtn.style.background = '';
-  payBtn.style.pointerEvents = '';
-  payBtn.removeAttribute('aria-disabled');
-  payBtn.removeAttribute('tabindex');
+    paymentStatus.innerHTML = '⏳ Payment: <b>Pending</b>';
+    paymentStatus.classList.remove('paid');
+    payBtn.innerHTML = '<i class="fas fa-rupee-sign"></i> Pay ₹999 Securely';
+    payBtn.style.background = '';
+    payBtn.style.pointerEvents = '';
+    payBtn.removeAttribute('aria-disabled');
+    payBtn.removeAttribute('tabindex');
 
-  if (submitBtn) submitBtn.disabled = true;
-  debug('🎨 Payment UI: Pending state');
+    if (submitBtn) submitBtn.disabled = true;
+    debug('🎨 Payment UI: Pending state');
 }
 
 function initStarRating(containerId) {
-  const container = $(containerId);
-  if (!container) return;
+    const container = $(containerId);
+    if (!container) return;
 
-  const labels = container.querySelectorAll('label');
-  labels.forEach(label => {
-    label.addEventListener('click', function(e) {
-      e.preventDefault();
-      const inputId = this.getAttribute('for');
-      const input = document.getElementById(inputId);
-      if (input) {
-        container.querySelectorAll('input').forEach(radio => {
-          radio.checked = false;
+    const labels = container.querySelectorAll('label');
+    labels.forEach(label => {
+        label.addEventListener('click', function(e) {
+            e.preventDefault();
+            const inputId = this.getAttribute('for');
+            const input = document.getElementById(inputId);
+            if (input) {
+                container.querySelectorAll('input').forEach(radio => {
+                    radio.checked = false;
+                });
+                input.checked = true;
+                container.style.borderColor = '';
+                debug(`⭐ Rating selected: ${input.value}`);
+            }
         });
-        input.checked = true;
-        container.style.borderColor = '';
-        debug(`⭐ Rating selected: ${input.value}`);
-      }
-    });
 
-    label.setAttribute('tabindex', '0');
-    label.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        label.click();
-      }
+        label.setAttribute('tabindex', '0');
+        label.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                label.click();
+            }
+        });
     });
-  });
 }
 
 function showLoader(text = 'Processing...') {
-  const loader = $('loader');
-  const loaderText = $('loaderText');
+    const loader = $('loader');
+    const loaderText = $('loaderText');
 
-  if (loader) {
-    loader.classList.remove('hidden');
-    loader.setAttribute('aria-hidden', 'false');
-  }
-  if (loaderText) loaderText.textContent = text;
-  document.body.style.overflow = 'hidden';
-  debug(`🔄 Loader shown: ${text}`);
+    if (loader) {
+        loader.classList.remove('hidden');
+        loader.setAttribute('aria-hidden', 'false');
+    }
+    if (loaderText) loaderText.textContent = text;
+    document.body.style.overflow = 'hidden';
+    debug(`🔄 Loader shown: ${text}`);
 }
 
 function hideLoader() {
-  const loader = $('loader');
-  if (loader) {
-    loader.classList.add('hidden');
-    loader.setAttribute('aria-hidden', 'true');
-  }
-  document.body.style.overflow = '';
-  debug('🔄 Loader hidden');
+    const loader = $('loader');
+    if (loader) {
+        loader.classList.add('hidden');
+        loader.setAttribute('aria-hidden', 'true');
+    }
+    document.body.style.overflow = '';
+    debug('🔄 Loader hidden');
 }
 
 function showToast(message, type = 'info') {
-  const toast = $('toast');
-  if (!toast) return;
+    const toast = $('toast');
+    if (!toast) return;
 
-  const icons = {
-    success: 'fa-check-circle',
-    error: 'fa-exclamation-circle',
-    warning: 'fa-exclamation-triangle',
-    info: 'fa-info-circle'
-  };
+    const icons = {
+        success: 'fa-check-circle',
+        error: 'fa-exclamation-circle',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-info-circle'
+    };
 
-  if (toast._timeoutId) {
-    clearTimeout(toast._timeoutId);
-    delete toast._timeoutId;
-  }
+    if (toast._timeoutId) {
+        clearTimeout(toast._timeoutId);
+        delete toast._timeoutId;
+    }
 
-  toast.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i> ${message}`;
-  toast.className = `toast ${type}`;
-  toast.classList.remove('hidden');
+    toast.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i> ${message}`;
+    toast.className = `toast ${type}`;
+    toast.classList.remove('hidden');
 
-  toast._timeoutId = setTimeout(() => {
-    toast.classList.add('hidden');
-    delete toast._timeoutId;
-  }, 3500);
+    toast._timeoutId = setTimeout(() => {
+        toast.classList.add('hidden');
+        delete toast._timeoutId;
+    }, 3500);
 
-  debug(`🔔 Toast: [${type}] ${message}`);
+    debug(`🔔 Toast: [${type}] ${message}`);
 }
 
 function resetAll() {
-  debug('🔄 Global reset triggered');
-  $('successMsg')?.classList.add('hidden');
-  resetFeedbackForm();
-  resetPaidForm();
-  isSubmitting = false;
-  showView('landing');
+    debug('🔄 Global reset triggered');
+    $('successMsg')?.classList.add('hidden');
+    resetFeedbackForm();
+    resetPaidForm();
+    isSubmitting = false;
+    showView('landing');
 
-  if (window.history.replaceState) {
-    window.history.replaceState({}, document.title, CONFIG.RETURN_URL);
-  }
+    if (window.history.replaceState) {
+        window.history.replaceState({}, document.title, CONFIG.RETURN_URL);
+    }
 
-  debug('✅ Global reset complete');
+    debug('✅ Global reset complete');
 }
 
 window.addEventListener('popstate', () => {
-  if (!paymentDone && !window.location.search.includes('razorpay_')) {
-    debug('⬅️ Back navigation - resetting');
-    resetAll();
-  }
+    if (!paymentDone && !window.location.search.includes('razorpay_')) {
+        debug('⬅️ Back navigation - resetting');
+        resetAll();
+    }
 });
 
 window.addEventListener('beforeunload', () => {
-  try {
-    sessionStorage.removeItem('tempPaidData');
-  } catch (e) {}
+    try {
+        sessionStorage.removeItem('tempPaidData');
+    } catch (e) {}
 });
 
 document.addEventListener('focusin', (e) => {
-  if (e.target.tagName === 'INPUT' && window.innerWidth < 500) {
-    const meta = document.querySelector('meta[name="viewport"]');
-    if (meta && !meta.content.includes('user-scalable=no')) {
-      meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+    if (e.target.tagName === 'INPUT' && window.innerWidth < 500) {
+        const meta = document.querySelector('meta[name="viewport"]');
+        if (meta && !meta.content.includes('user-scalable=no')) {
+            meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+        }
     }
-  }
 });
 
 $$('input[type="text"], input[type="email"], input[type="tel"], input[type="number"], textarea').forEach(field => {
-  field.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
-      e.preventDefault();
-      const form = e.target.closest('form');
-      const fields = Array.from(form?.querySelectorAll('input, textarea, select') || []);
-      const currentIndex = fields.indexOf(e.target);
-      const nextField = fields[currentIndex + 1];
-      if (nextField) nextField.focus();
-      else e.target.blur();
-    }
-  });
+    field.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+            e.preventDefault();
+            const form = e.target.closest('form');
+            const fields = Array.from(form?.querySelectorAll('input, textarea, select') || []);
+            const currentIndex = fields.indexOf(e.target);
+            const nextField = fields[currentIndex + 1];
+            if (nextField) nextField.focus();
+            else e.target.blur();
+        }
+    });
 });
 
 const style = document.createElement('style');
 style.textContent = `
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  75% { transform: translateX(5px); }
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
 }
 `;
 document.head.appendChild(style);
 
-debug('🎯 Event Registration System Ready - Feedback + Audit Working');
+debug('🎯 Event Registration System Ready - Auto Excel Save Enabled');
