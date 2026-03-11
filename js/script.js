@@ -591,71 +591,65 @@ async function submitToGoogleSheets(data, formType) {
 }
 
 function showSuccess(data, formType) {
-  $('feedbackForm')?.classList.add('hidden-form');
-  $('paidForm')?.classList.add('hidden-form');
+    // 1. Hide Both Forms Immediately
+    $('feedbackForm')?.classList.add('hidden-form');
+    $('paidForm')?.classList.add('hidden-form');
+    $('landingPage')?.classList.add('hidden');
 
-  const successMsg = $('successMsg');
-  if (!successMsg) return;
+    const successMsg = $('successMsg');
+    if (!successMsg) return;
 
-  successMsg.classList.remove('hidden');
+    // 2. Show Success Container
+    successMsg.classList.remove('hidden');
 
-  // ✅ FEEDBACK - Minimal Message
-  if (formType === 'feedback') {
-    successMsg.innerHTML = `
-      <div class="success-icon" style="font-size:4rem;color:var(--success);margin-bottom:15px">
-        <i class="fas fa-check-circle"></i>
-      </div>
-      <h2 id="successTitle" style="margin:10px 0;color:var(--text)">✅ Feedback Submitted!</h2>
-      <p style="color:var(--muted);margin:15px 0;font-size:1.1rem">
-        Thank you for sharing your valuable feedback! 🙏
-      </p>
-      <button type="button" onclick="resetAll()" class="btn-primary" style="margin-top:25px">
-        <i class="fas fa-home"></i> Back to Home
-      </button>
-    `;
-    debug('🎉 Minimal success screen for feedback');
-  } 
-  // ✅ PAID/AUDIT - Full Receipt
-  else {
-    const mappings = {
-      sName: data.name,
-      sEmail: data.email,
-      sAmount: data.amount,
-      sTime: new Date().toLocaleString('en-IN', {
-        year: 'numeric', month: 'short', day: 'numeric',
-        hour: '2-digit', minute: '2-digit'
-      }),
-      sType: 'Audit Registration',
-      sStatus: 'Completed'
-    };
-
-    Object.entries(mappings).forEach(([id, value]) => {
-      const el = $(id);
-      if (el) el.textContent = value;
-    });
-
-    const paymentIdRow = $('paymentIdRow');
-    const sPaymentId = $('sPaymentId');
-    if (data.razorpay_payment_id && data.razorpay_payment_id !== 'N/A') {
-      if (paymentIdRow) paymentIdRow.style.display = 'flex';
-      if (sPaymentId) sPaymentId.textContent = data.razorpay_payment_id;
-    } else {
-      if (paymentIdRow) paymentIdRow.style.display = 'none';
+    // 3. FEEDBACK - Minimal Message (No Receipt Details)
+    if (formType === 'feedback') {
+        successMsg.innerHTML = `
+            <div class="success-icon" style="font-size:4rem; color:var(--success); margin-bottom:15px">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h2 id="successTitle" style="margin:10px 0; color:var(--text)">✅ Feedback Submitted!</h2>
+            <p style="color:var(--muted); margin:15px 0; font-size:1.1rem">
+                Thank you for sharing your valuable feedback! 🙏
+            </p>
+            <button type="button" onclick="resetAll()" class="btn-primary" style="margin-top:25px; max-width: 250px;">
+                <i class="fas fa-home"></i> Back to Home
+            </button>
+        `;
+        debug('🎉 Minimal success screen for feedback');
+    } 
+    // 4. PAID/AUDIT - Full Receipt (Keep existing logic for Paid)
+    else {
+        // ... (Keep your existing Paid receipt logic here) ...
+        const mappings = {
+            sName: data.name,
+            sEmail: data.email,
+            sAmount: data.amount,
+            sTime: new Date().toLocaleString('en-IN', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+            sType: 'Audit Registration',
+            sStatus: 'Completed'
+        };
+        Object.entries(mappings).forEach(([id, value]) => {
+            const el = $(id);
+            if (el) el.textContent = value;
+        });
+        const paymentIdRow = $('paymentIdRow');
+        const sPaymentId = $('sPaymentId');
+        if (data.razorpay_payment_id && data.razorpay_payment_id !== 'N/A') {
+            if (paymentIdRow) paymentIdRow.style.display = 'flex';
+            if (sPaymentId) sPaymentId.textContent = data.razorpay_payment_id;
+        } else {
+            if (paymentIdRow) paymentIdRow.style.display = 'none';
+        }
+        const successTitle = $('successTitle');
+        if (successTitle) successTitle.textContent = '✅ Registration Successful!';
+        const printBtn = successMsg.querySelector('.btn-outline');
+        if (printBtn) printBtn.style.display = 'inline-flex';
+        debug('🎉 Full success screen for paid registration');
     }
 
-    const successTitle = $('successTitle');
-    if (successTitle) {
-      successTitle.textContent = '✅ Registration Successful!';
-    }
-
-    const printBtn = successMsg.querySelector('.btn-outline');
-    if (printBtn) printBtn.style.display = 'inline-flex';
-
-    debug('🎉 Full success screen for paid registration');
-  }
-
-  currentView = 'success';
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+    currentView = 'success';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function updatePaymentUI(paid) {
