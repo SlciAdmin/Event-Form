@@ -1,7 +1,6 @@
 /**
- * Event Registration System - FULLY WORKING
- * Feedback + Audit with Razorpay Payment
- * ✅ Auto Excel Save + Form Restore After Payment
+ * Event Registration System - MOBILE OPTIMIZED
+ * ✅ Fixed: Payment Return + Auto Submit + Excel Save
  */
 
 const CONFIG = {
@@ -9,7 +8,7 @@ const CONFIG = {
     AMOUNT: 100,
     CURRENCY: "INR",
     GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbywqI8MUkRrIMi-VsYADWO05KtCJOMCaeZAp8s7FuBEbIi3W2JSfFFkVISO8Yg-XNgg/exec",
-    RETURN_URL: "https://slciadmin.github.io/Event-Form/",  // ✅ Updated URL
+    RETURN_URL: "https://slciadmin.github.io/Event-Form/",
     DEBUG: true
 };
 
@@ -35,6 +34,7 @@ function debug(msg, data = null) {
 function showView(viewName) {
     currentView = viewName;
     
+    // Hide all views first
     $('landingPage')?.classList.add('hidden');
     $('landingPage')?.classList.remove('active-form');
     $('feedbackForm')?.classList.add('hidden-form');
@@ -44,6 +44,7 @@ function showView(viewName) {
     $('successMsg')?.classList.add('hidden');
     $('successMsg')?.classList.remove('active-form');
 
+    // Show requested view
     switch(viewName) {
         case 'landing':
             $('landingPage')?.classList.remove('hidden');
@@ -69,91 +70,143 @@ function backToLanding() {
     showView('landing');
 }
 
-// 🔥 ENHANCED: handlePaymentReturn with Form Restore + Auto Submit
+// 🔥 CRITICAL FIX: Enhanced Payment Return Handler for Mobile
 function handlePaymentReturn() {
     debug('🔍 Checking payment return...');
+    
+    // Method 1: Check URL Parameters
     const urlParams = new URLSearchParams(window.location.search);
     const paymentId = urlParams.get('razorpay_payment_id');
     const status = urlParams.get('razorpay_payment_status');
     const orderId = urlParams.get('razorpay_order_id');
     const error = urlParams.get('razorpay_error');
+    
+    // Method 2: Check if payment data in sessionStorage (fallback)
+    const savedPaymentData = sessionStorage.getItem('paymentData');
+    
+    debug('URL Params:', { paymentId, status, orderId, error });
+    debug('Session Payment Data:', savedPaymentData);
 
-    // ✅ PAYMENT SUCCESSFUL
+    // ✅ CHECK 1: Payment Successful via URL
     if (paymentId && status === 'captured') {
-        debug('✅ Payment captured!', { paymentId, orderId });
-        paymentDone = true;
-        paymentData.razorpay_payment_id = paymentId;
-        paymentData.razorpay_order_id = orderId || 'N/A';
-        
-        try {
-            sessionStorage.setItem('paymentData', JSON.stringify(paymentData));
-        } catch (e) { debug('⚠️ Session storage failed', e); }
-
-        // URL clean karein (parameters hata dein)
-        if (window.history.replaceState) {
-            const cleanUrl = window.location.pathname;
-            window.history.replaceState({}, document.title, cleanUrl);
-        }
-
-        updatePaymentUI(true);
-        const submitBtn = $('submitBtn');
-        if (submitBtn) submitBtn.disabled = false;
-
-        // 🔥 FORM DATA RESTORE KAREIN (Sabse Important)
-        const savedFormData = sessionStorage.getItem('tempPaidData');
-        if (savedFormData && currentView === 'paid') {
-            try {
-                const formData = JSON.parse(savedFormData);
-                // Fields ko wapas fill karein
-                if($('name')) $('name').value = formData.name || '';
-                if($('email')) $('email').value = formData.email || '';
-                if($('phone')) $('phone').value = formData.phone || '';
-                if($('company')) $('company').value = formData.company || '';
-                if($('designation')) $('designation').value = formData.designation || '';
-                if($('city')) $('city').value = formData.city || '';
-                if($('employees')) $('employees').value = formData.employees || '';
-                if($('remarks')) $('remarks').value = formData.remarks || '';
-                
-                // Rating restore karein
-                if(formData.audit_rating) {
-                    const ratingRadio = document.querySelector(`input[name="audit_rating"][value="${formData.audit_rating}"]`);
-                    if(ratingRadio) ratingRadio.checked = true;
-                }
-                debug('🔄 Form data restored from session');
-            } catch (e) { debug('⚠️ Failed to restore form data', e); }
-        }
-
-        // 🔥 Auto-submit trigger karein (2 second baad taaki UI render ho jaye)
-        setTimeout(() => {
-            if (validatePaidForm()) {
-                debug('🔄 Auto-submitting paid form after payment...');
-                handlePaidSubmit(null, true);  // ✅ Ye Google Sheet mein data bhejega
-            } else {
-                showToast('⚠️ Payment successful, please check form fields', 'warning');
-            }
-        }, 2000);
+        debug('✅ Payment captured via URL!', { paymentId, orderId });
+        processSuccessfulPayment(paymentId, orderId || 'N/A');
+        cleanURL();
         return true;
     }
+    
+    // ✅ CHECK 2: Payment data in sessionStorage (mobile fallback)
+    if (savedPaymentData && currentView === 'paid') {
+        try {
+            const parsedData = JSON.parse(savedPaymentData);
+            if (parsedData.razorpay_payment_id && parsedData.payment_status === 'captured') {
+                debug('✅ Payment captured via SessionStorage!', parsedData);
+                processSuccessfulPayment(parsedData.razorpay_payment_id, parsedData.razorpay_order_id || 'N/A');
+                return true;
+            }
+        } catch (e) {
+            debug('⚠️ Failed to parse session payment data', e);
+        }
+    }
 
-    // ❌ PAYMENT FAILED/CANCELLED
+    // ❌ Payment Failed/Cancelled
     if (error || (status && status !== 'captured')) {
         debug('❌ Payment failed/cancelled', { error, status });
         showToast(`⚠️ Payment ${error ? 'Failed' : 'Cancelled'}. Please try again.`, 'warning');
         resetPaymentUI();
-        if (window.history.replaceState) {
-            const cleanUrl = window.location.pathname;
-            window.history.replaceState({}, document.title, cleanUrl);
-        }
+        cleanURL();
         return false;
     }
-    debug('ℹ️ No payment parameters');
+    
+    debug('ℹ️ No payment parameters found');
     return false;
+}
+
+// 🔥 NEW: Process Successful Payment (Separated for clarity)
+function processSuccessfulPayment(paymentId, orderId) {
+    paymentDone = true;
+    paymentData.razorpay_payment_id = paymentId;
+    paymentData.razorpay_order_id = orderId;
+    paymentData.razorpay_signature = "AUTO_CAPTURED";
+    
+    // Save to sessionStorage
+    try {
+        sessionStorage.setItem('paymentData', JSON.stringify(paymentData));
+        debug('💾 Payment data saved to session');
+    } catch (e) { 
+        debug('⚠️ Session storage failed', e); 
+    }
+
+    // Update UI immediately
+    updatePaymentUI(true);
+    const submitBtn = $('submitBtn');
+    if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-check"></i> Complete Registration';
+    }
+
+    // Restore form data
+    restoreFormData();
+
+    // 🔥 CRITICAL: Auto-submit after short delay (mobile optimized)
+    setTimeout(() => {
+        if (validatePaidForm()) {
+            debug('🔄 Auto-submitting paid form after payment...');
+            handlePaidSubmit(null, true);
+        } else {
+            debug('⚠️ Form validation failed, showing form to user');
+            showToast('✅ Payment Successful! Please review and submit.', 'success');
+            showView('paid');
+        }
+    }, 1500); // Reduced from 2000ms for better mobile UX
+}
+
+// 🔥 NEW: Restore Form Data from Session
+function restoreFormData() {
+    const savedFormData = sessionStorage.getItem('tempPaidData');
+    if (savedFormData) {
+        try {
+            const formData = JSON.parse(savedFormData);
+            
+            // Restore all fields
+            const fields = ['name', 'email', 'phone', 'company', 'designation', 'city', 'employees', 'remarks'];
+            fields.forEach(fieldId => {
+                const field = $(fieldId);
+                if (field && formData[fieldId]) {
+                    field.value = formData[fieldId];
+                }
+            });
+            
+            // Restore rating
+            if (formData.audit_rating) {
+                const ratingRadio = document.querySelector(`input[name="audit_rating"][value="${formData.audit_rating}"]`);
+                if (ratingRadio) {
+                    ratingRadio.checked = true;
+                    debug('⭐ Rating restored:', formData.audit_rating);
+                }
+            }
+            
+            debug('🔄 Form data restored successfully');
+        } catch (e) { 
+            debug('⚠️ Failed to restore form data', e); 
+        }
+    }
+}
+
+// 🔥 NEW: Clean URL Parameters
+function cleanURL() {
+    if (window.history.replaceState) {
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+        debug('🧹 URL cleaned');
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     debug('🚀 DOM Content Loaded');
     showView('landing');
 
+    // Button Event Listeners
     $('showFeedbackBtn')?.addEventListener('click', (e) => {
         e.preventDefault();
         debug('🖱️ Feedback button clicked');
@@ -168,11 +221,14 @@ document.addEventListener('DOMContentLoaded', () => {
         initPaidForm();
     });
 
+    // Initialize forms
     initFeedbackForm();
     initPaidForm();
     
-    // ✅ Check for payment return on page load
-    handlePaymentReturn();
+    // ✅ CRITICAL: Check payment return AFTER everything is loaded
+    setTimeout(() => {
+        handlePaymentReturn();
+    }, 300);
 });
 
 function initFeedbackForm() {
@@ -214,23 +270,27 @@ function initPaidForm() {
     const newForm = form.cloneNode(true);
     form.parentNode.replaceChild(newForm, form);
 
-    // Check for saved payment
+    // Check for saved payment state
     const savedPayment = sessionStorage.getItem('paymentData');
-    if (savedPayment && currentView === 'paid') {
+    if (savedPayment) {
         try {
             paymentData = JSON.parse(savedPayment);
             if (paymentData.razorpay_payment_id) {
                 paymentDone = true;
                 updatePaymentUI(true);
                 const submitBtn = $('submitBtn');
-                if (submitBtn) submitBtn.disabled = false;
-                debug('🔄 Payment state restored');
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-check"></i> Complete Registration';
+                }
+                debug('🔄 Payment state restored from session');
             }
         } catch (e) {
             debug('⚠️ Failed to parse payment data', e);
         }
     }
 
+    // Payment Button Handler
     const payBtn = $('payBtn');
     if (payBtn) {
         payBtn.addEventListener('click', (e) => {
@@ -240,10 +300,11 @@ function initPaidForm() {
                 return false;
             }
 
+            // Save form data BEFORE redirect
             try {
                 const formData = collectPaidFormData();
-                sessionStorage.setItem('tempPaidData', JSON.stringify(formData));  // ✅ Form data save before redirect
-                debug('💾 Form data saved to session');
+                sessionStorage.setItem('tempPaidData', JSON.stringify(formData));
+                debug('💾 Form data saved to session before payment');
             } catch (err) {
                 debug('⚠️ Failed to save temp data', err);
             }
@@ -253,6 +314,7 @@ function initPaidForm() {
         });
     }
 
+    // Form Submit Handler
     newForm.addEventListener('submit', (e) => {
         e.preventDefault();
         if (!isSubmitting && paymentDone) {
@@ -262,6 +324,7 @@ function initPaidForm() {
         }
     });
 
+    // Field Validation
     ['name', 'email', 'phone', 'city', 'employees', 'designation', 'company'].forEach(id => {
         const field = $(id);
         if (field) {
@@ -405,7 +468,7 @@ async function handleFeedbackSubmit() {
         const data = collectFeedbackData();
         debug('📦 Feedback data collected', data);
 
-        await submitToGoogleSheets(data, 'feedback');  // ✅ Excel/Sheet save
+        await submitToGoogleSheets(data, 'feedback');
         showSuccess(data, 'feedback');
     } catch (error) {
         console.error('Feedback error:', error);
@@ -491,6 +554,7 @@ async function handlePaidSubmit(e = null, autoSubmit = false) {
             const saved = sessionStorage.getItem('paymentData');
             if (saved) {
                 paymentData = JSON.parse(saved);
+                debug('🔄 Payment data restored from session');
             }
         } catch (err) {
             debug('⚠️ Failed to restore payment data', err);
@@ -511,12 +575,13 @@ async function handlePaidSubmit(e = null, autoSubmit = false) {
         const data = collectPaidFormData();
         debug('📦 Paid data collected', data);
 
-        await submitToGoogleSheets(data, 'audit');  // ✅ EXCEL/GOOGLE SHEET SAVE HERE
+        await submitToGoogleSheets(data, 'audit');
         showSuccess(data, 'paid');
         
         // Clear session after successful submission
         sessionStorage.removeItem('paymentData');
         sessionStorage.removeItem('tempPaidData');
+        debug('🧹 Session data cleared');
         
     } catch (error) {
         console.error('Paid submission error:', error);
@@ -602,7 +667,7 @@ async function submitToGoogleSheets(data, formType) {
     try {
         const response = await fetch(CONFIG.GOOGLE_SCRIPT, {
             method: 'POST',
-            mode: 'no-cors',  // ✅ CORS bypass for Google Apps Script
+            mode: 'no-cors',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
@@ -695,6 +760,7 @@ function updatePaymentUI(paid) {
 
         if (submitBtn) {
             submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-check"></i> Complete Registration';
             submitBtn.focus();
             debug('✅ Submit button enabled after payment');
         }
@@ -718,7 +784,10 @@ function resetPaymentUI() {
     payBtn.removeAttribute('aria-disabled');
     payBtn.removeAttribute('tabindex');
 
-    if (submitBtn) submitBtn.disabled = true;
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-lock"></i> Complete Registration';
+    }
     debug('🎨 Payment UI: Pending state');
 }
 
@@ -864,4 +933,4 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-debug('🎯 Event Registration System Ready - Auto Excel Save Enabled');
+debug('🎯 Event Registration System Ready - Mobile Optimized');
