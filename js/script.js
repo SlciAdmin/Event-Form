@@ -9,7 +9,7 @@ const CONFIG = {
     PAYMENT_LINK: "https://rzp.io/rzp/5NCrTAI",
     AMOUNT: 1,  // ✅ Testing: ₹1 as requested
     CURRENCY: "INR",
-    GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbywqI8MUkRrIMi-VsYADWO05KtCJOMCaeZAp8s7FuBEbIi3W2JSfFFkVISO8Yg-XNgg/exec",
+    GOOGLE_SCRIPT: "https://script.google.com/macros/library/d/1Etu_Q0tgZAGf5VvwxiB2M4dK2WUTqohwnox26q5YMolg8e100zo9zAtl/7",
     RETURN_URL: "https://slciadmin.github.io/Event-Form/",
     DEBUG: true,
     MAX_RETRIES: 3  // ✅ Added retry logic for sheet submission
