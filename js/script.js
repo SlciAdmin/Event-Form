@@ -5,7 +5,7 @@
 
 const CONFIG = {
   PAYMENT_LINK: "https://rzp.io/rzp/5NCrTAI",
-  AMOUNT: 99900,
+  AMOUNT: 100,
   CURRENCY: "INR",
   GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbywqI8MUkRrIMi-VsYADWO05KtCJOMCaeZAp8s7FuBEbIi3W2JSfFFkVISO8Yg-XNgg/exec",
   RETURN_URL: window.location.href.split('?')[0],
@@ -516,7 +516,7 @@ function collectPaidFormData() {
     remarks: $('remarks')?.value.trim() || 'None',
     form_type: 'paid_registration',
     payment_status: 'Paid',
-    amount: '₹999.00',
+    amount: '₹1.00',
     payment_method: 'Razorpay',
     razorpay_payment_id: paymentData.razorpay_payment_id || 'PENDING',
     razorpay_order_id: paymentData.razorpay_order_id || 'N/A',
