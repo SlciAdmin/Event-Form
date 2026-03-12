@@ -1,14 +1,14 @@
 /**
  * ✅ FINAL: Event Registration System - AUTO SUBMIT VERSION
  * Razorpay Payment Link + Auto Google Sheets Integration
- * ✅ NO TRAILING SPACES IN URLs
+ * ✅ NO TRAILING SPACES IN URLs - FIXED
  */
 
 const CONFIG = {
     PAYMENT_LINK: "https://rzp.io/rzp/5NCrTAI",  // ✅ NO SPACES
     AMOUNT: 1,
     CURRENCY: "INR",
-    GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbycm3KsCsQYgBXk39uPM9U1BtL6KdVCD7Et3FT_8sfHlv0CY-Ul5hsZkehzVyBp3hLhkQ/exec",  // ✅ NO SPACES
+    GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbw5BWAINRLGY5pEZVTVlPjlks_XgeNdOAJtrI3Yl0MzbOrS8EcyWWu50jdgiFkrlFp5-Q/exec",  // ✅ NO SPACES
     RETURN_URL: window.location.origin + window.location.pathname,
     DEBUG: true
 };
@@ -378,14 +378,21 @@ function markInvalid(field) {
     setTimeout(() => { field.style.animation = 'shake 0.3s ease'; }, 10);
 }
 
-// Feedback Submission
+// Feedback Submission - SINGLE ENTRY GUARANTEE
 async function handleFeedbackSubmit() {
-    if (isSubmitting || !validateFeedbackForm()) {
-        if (!validateFeedbackForm()) showToast('Please fill all required fields', 'error');
+    if (isSubmitting) {
+        debug('⚠️ Already submitting feedback - ignoring duplicate');
         return;
     }
-    isSubmitting = true;
+    
+    if (!validateFeedbackForm()) {
+        showToast('Please fill all required fields', 'error');
+        return;
+    }
+    
+    isSubmitting = true;  // ✅ PREVENT DUPLICATES
     showLoader('Submitting Feedback...');
+    
     try {
         const data = collectFeedbackData();
         await submitToGoogleSheets(data, 'feedback');
@@ -394,20 +401,32 @@ async function handleFeedbackSubmit() {
         console.error('Feedback error:', error);
         showToast('⚠️ Feedback saved locally', 'warning');
         showSuccess(collectFeedbackData(), 'feedback');
-    } finally { hideLoader(); isSubmitting = false; }
+    } finally {
+        hideLoader();
+        isSubmitting = false;  // ✅ RESET FLAG
+    }
 }
 
 function collectFeedbackData() {
     const rating = document.querySelector('input[name="fb_rating"]:checked')?.value || 'Not rated';
     return {
-        name: $('fb_name')?.value.trim() || '', designation: $('fb_designation')?.value.trim() || '',
-        company: $('fb_company')?.value.trim() || '', employees: $('fb_employees')?.value.trim() || '',
-        phone: $('fb_phone')?.value.trim() || '', email: $('fb_email')?.value.trim() || '',
-        city: $('fb_city')?.value.trim() || '', session_rating: rating,
-        remarks: $('fb_remarks')?.value.trim() || 'None', form_type: 'feedback',
-        payment_status: 'Not Applicable', amount: '₹0.00', payment_method: 'None',
-        razorpay_payment_id: 'N/A', timestamp: new Date().toISOString(),
-        user_agent: navigator.userAgent, screen_resolution: `${screen.width}x${screen.height}`
+        name: $('fb_name')?.value.trim() || '',
+        designation: $('fb_designation')?.value.trim() || '',
+        company: $('fb_company')?.value.trim() || '',
+        employees: $('fb_employees')?.value.trim() || '',
+        phone: $('fb_phone')?.value.trim() || '',
+        email: $('fb_email')?.value.trim() || '',
+        city: $('fb_city')?.value.trim() || '',
+        session_rating: rating,
+        remarks: $('fb_remarks')?.value.trim() || 'None',
+        form_type: 'feedback',
+        payment_status: 'Not Applicable',
+        amount: '₹0.00',
+        payment_method: 'None',
+        razorpay_payment_id: 'N/A',
+        timestamp: new Date().toISOString(),
+        user_agent: navigator.userAgent,
+        screen_resolution: `${screen.width}x${screen.height}`
     };
 }
 
@@ -422,7 +441,7 @@ function resetFeedbackForm() {
     const rc = $('fb_starRating'); if (rc) rc.style.borderColor = '';
 }
 
-// ✅ Paid/Audit Submission - AUTO SUBMIT ENABLED
+// ✅ Paid/Audit Submission - AUTO SUBMIT + SINGLE ENTRY
 async function handlePaidSubmit(e = null, autoSubmit = false) {
     if (e) e.preventDefault();
     debug('📤 Paid submit triggered', { autoSubmit });
@@ -447,7 +466,7 @@ async function handlePaidSubmit(e = null, autoSubmit = false) {
         showToast('⚠️ Payment verification failed', 'error'); resetPaidForm(); return;
     }
     
-    isSubmitting = true;
+    isSubmitting = true;  // ✅ PREVENT DUPLICATES
     showLoader(autoSubmit ? 'Auto-submitting...' : 'Completing Registration...');
     
     try {
@@ -466,24 +485,36 @@ async function handlePaidSubmit(e = null, autoSubmit = false) {
         console.error('Paid error:', error);
         showToast('⚠️ Registration saved locally', 'warning');
         showSuccess(collectPaidFormData(), 'paid');
-    } finally { hideLoader(); isSubmitting = false; }
+    } finally {
+        hideLoader();
+        isSubmitting = false;  // ✅ RESET FLAG
+    }
 }
 
 function collectPaidFormData() {
     const auditRating = document.querySelector('input[name="audit_rating"]:checked')?.value || 'Not rated';
     return {
-        name: $('name')?.value.trim() || '', designation: $('designation')?.value.trim() || '',
-        company: $('company')?.value.trim() || '', employees: $('employees')?.value.trim() || '',
-        phone: $('phone')?.value.trim() || '', email: $('email')?.value.trim() || '',
-        city: $('city')?.value.trim() || '', audit_rating: auditRating,
-        remarks: $('remarks')?.value.trim() || 'None', form_type: 'paid_registration',
-        payment_status: 'Paid', amount: '₹1.00', payment_method: 'Razorpay',
+        name: $('name')?.value.trim() || '',
+        designation: $('designation')?.value.trim() || '',
+        company: $('company')?.value.trim() || '',
+        employees: $('employees')?.value.trim() || '',
+        phone: $('phone')?.value.trim() || '',
+        email: $('email')?.value.trim() || '',
+        city: $('city')?.value.trim() || '',
+        audit_rating: auditRating,
+        remarks: $('remarks')?.value.trim() || 'None',
+        form_type: 'paid_registration',
+        payment_status: 'Paid',
+        amount: '₹1.00',
+        payment_method: 'Razorpay',
         razorpay_payment_id: paymentData.razorpay_payment_id || 'PENDING',
         razorpay_order_id: paymentData.razorpay_order_id || 'N/A',
         razorpay_signature: paymentData.razorpay_signature || 'N/A',
         payment_link_id: paymentData.payment_link_id || 'IRE79PZ',
-        timestamp: new Date().toISOString(), user_agent: navigator.userAgent,
-        screen_resolution: `${screen.width}x${screen.height}`, return_url: CONFIG.RETURN_URL
+        timestamp: new Date().toISOString(),
+        user_agent: navigator.userAgent,
+        screen_resolution: `${screen.width}x${screen.height}`,
+        return_url: CONFIG.RETURN_URL
     };
 }
 
@@ -501,7 +532,7 @@ function resetPaidForm() {
     try { sessionStorage.removeItem('paymentData'); sessionStorage.removeItem('tempPaidData'); } catch (e) {}
 }
 
-// ✅ Submit to Google Sheets
+// ✅ Submit to Google Sheets - SINGLE ENTRY GUARANTEE
 async function submitToGoogleSheets(data, formType) {
     if (!CONFIG.GOOGLE_SCRIPT || CONFIG.GOOGLE_SCRIPT.includes('YOUR_')) {
         debug('📋 Demo mode'); return true;
@@ -695,4 +726,4 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-debug('🎯 System Ready - Auto-Submit Enabled');
+debug('🎯 System Ready - Auto-Submit Enabled - Single Entry Guarantee');
