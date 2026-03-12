@@ -1,7 +1,7 @@
 /**
- * ✅ FINAL: Event Registration System - 2 URL VERSION
+ * ✅ FINAL: Event Registration System - AUTO SUBMIT VERSION
  * Razorpay Payment Link + Auto Google Sheets Integration
- * ✅ FIXED: ?page=paid URL properly work karega
+ * ✅ PAYMENT SUCCESS = PAID FORM (Not Landing Page)
  */
 
 const CONFIG = {
@@ -9,7 +9,7 @@ const CONFIG = {
     AMOUNT: 1,
     CURRENCY: "INR",
     GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbw5BWAINRLGY5pEZVTVlPjlks_XgeNdOAJtrI3Yl0MzbOrS8EcyWWu50jdgiFkrlFp5-Q/exec",
-    RETURN_URL: window.location.origin + window.location.pathname + '?page=paid',
+    RETURN_URL: window.location.origin + window.location.pathname,
     DEBUG: true
 };
 
@@ -33,12 +33,6 @@ function debug(msg, data = null) {
     if (CONFIG.DEBUG) {
         console.log(`[💳 ${new Date().toLocaleTimeString()}] ${msg}`, data || '');
     }
-}
-
-// ✅ URL se page detect karne ka function
-function getCurrentPage() {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('page') || 'landing';
 }
 
 // View manager
@@ -76,10 +70,10 @@ function showView(viewName) {
 
 function backToLanding() { 
     sessionStorage.removeItem('tempPaidData');
-    window.location.href = window.location.origin + window.location.pathname;
+    showView('landing'); 
 }
 
-// 🔥 Payment Return Handler
+// 🔥 Payment Return Handler - AUTO SUBMIT
 function handlePaymentReturn() {
     debug('🔍 Checking payment return...');
     const urlParams = new URLSearchParams(window.location.search);
@@ -91,18 +85,18 @@ function handlePaymentReturn() {
     const savedPaymentData = sessionStorage.getItem('paymentData');
     
     debug('📋 URL Params:', { paymentId, status, orderId, error });
-    debug('💾 SessionStorage:', savedPaymentData ? 'Found' : 'Not Found');
+    debug('💾 SessionStorage Payment:', savedPaymentData ? 'Found' : 'Not Found');
     
     // ✅ CHECK 1: Payment Successful via URL
     if (paymentId && (status === 'captured' || status === 'success' || status === 'paid')) {
-        debug('✅ Payment captured via URL!');
+        debug('✅ Payment captured via URL!', { paymentId, orderId });
         showToast('✅ Payment Successful! Loading form...', 'success');
         processSuccessfulPayment(paymentId, orderId || 'ORDER_' + Date.now());
         cleanURL();
         return true;
     }
     
-    // ✅ CHECK 2: SessionStorage fallback
+    // ✅ CHECK 2: SessionStorage fallback (MOST IMPORTANT!)
     if (savedPaymentData && !paymentDone) {
         try {
             const parsedData = JSON.parse(savedPaymentData);
@@ -153,14 +147,18 @@ function processSuccessfulPayment(paymentId, orderId) {
     
     try {
         sessionStorage.setItem('paymentData', JSON.stringify(paymentData));
-        debug('💾 Payment data saved');
+        debug('💾 Payment data saved to sessionStorage');
     } catch (e) { 
         debug('⚠️ Session save failed', e); 
     }
     
+    // ✅ STEP 1: Form data restore karo
     restoreFormData();
+    
+    // ✅ STEP 2: Payment UI update karo
     updatePaymentUI(true);
     
+    // ✅ STEP 3: Submit button enable karo
     const submitBtn = $('submitBtn');
     if (submitBtn) {
         submitBtn.disabled = false;
@@ -168,19 +166,22 @@ function processSuccessfulPayment(paymentId, orderId) {
         submitBtn.classList.add('pulse-animation');
     }
     
+    // ✅ STEP 4: PAID FORM DIKHAO (Ye sabse important hai!)
     setTimeout(() => {
-        showView('paid');
+        showView('paid');  // ✅ PAID FORM, NOT LANDING!
         showToast('✅ Payment Successful! Click "Complete Registration"', 'success');
         
+        // ✅ Auto-submit after 3 seconds (optional)
         setTimeout(() => {
             if (currentView === 'paid' && validatePaidForm() && !isSubmitting) {
-                debug('🔄 AUTO-SUBMITTING...');
+                debug('🔄 AUTO-SUBMITTING after payment...');
                 handlePaidSubmit(null, true);
             }
         }, 3000);
     }, 200);
 }
 
+// Restore Form Data
 function restoreFormData() {
     const savedFormData = sessionStorage.getItem('tempPaidData');
     if (savedFormData) {
@@ -201,15 +202,15 @@ function restoreFormData() {
     }
 }
 
+// Clean URL
 function cleanURL() {
     if (window.history.replaceState) {
-        const cleanUrl = window.location.origin + window.location.pathname + '?page=paid';
-        window.history.replaceState({}, document.title, cleanUrl);
-        debug('🧹 URL cleaned:', cleanUrl);
+        window.history.replaceState({}, document.title, window.location.pathname);
+        debug('🧹 URL cleaned');
     }
 }
 
-// DOM Ready - ✅ YE SABSE IMPORTANT HAI!
+// DOM Ready
 document.addEventListener('DOMContentLoaded', () => {
     debug('🚀 DOM Loaded');
     debug('📍 Current URL:', window.location.href);
@@ -218,29 +219,16 @@ document.addEventListener('DOMContentLoaded', () => {
         tempPaidData: sessionStorage.getItem('tempPaidData')
     });
     
-    // ✅ STEP 1: URL se page check karein
-    const currentPage = getCurrentPage();
-    debug('📄 Current Page from URL:', currentPage);
-    
-    // ✅ STEP 2: Payment check karein
+    // ✅ STEP 1: Pehle payment check karo
     const paymentHandled = handlePaymentReturn();
     
-    // ✅ STEP 3: Page decide karein
-    if (paymentHandled) {
-        // Payment successful hai → Paid form dikhega (processSuccessfulPayment mein)
-        debug('✅ Payment handled');
-    } else if (currentPage === 'paid') {
-        // ✅ URL mein ?page=paid hai → PAID FORM DIKHAO
-        debug('📄 Showing PAID FORM from URL parameter');
-        showView('paid');
-        initPaidForm();
-    } else {
-        // Default → Landing Page
-        debug('📄 Showing LANDING PAGE');
+    // ✅ STEP 2: Page decide karo
+    if (!paymentHandled) {
+        debug('📄 Showing landing page (no payment)');
         showView('landing');
-        initFeedbackForm();
-        initPaidForm();
     }
+    // Agar paymentHandled = true, toh processSuccessfulPayment() ne already
+    // showView('paid') call kar diya hai
     
     // Button Listeners
     $('showFeedbackBtn')?.addEventListener('click', (e) => {
@@ -251,16 +239,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     $('showPaidBtn')?.addEventListener('click', (e) => {
         e.preventDefault();
-        // ✅ PAID PAGE PE JAO (URL change hoga)
-        const paidUrl = window.location.origin + window.location.pathname + '?page=paid';
-        debug('🔗 Redirecting to:', paidUrl);
-        window.location.href = paidUrl;
+        showView('paid');
+        initPaidForm();
     });
     
-    // Forms initialize karo agar landing page hai
-    if (currentPage !== 'paid' && !paymentHandled) {
-        initFeedbackForm();
-    }
+    initFeedbackForm();
+    initPaidForm();
 });
 
 // Initialize Feedback Form
@@ -305,7 +289,7 @@ function initPaidForm() {
     const newForm = form.cloneNode(true);
     form.parentNode.replaceChild(newForm, form);
     
-    // ✅ Check saved payment
+    // ✅ Check saved payment (SessionStorage se)
     const savedPayment = sessionStorage.getItem('paymentData');
     if (savedPayment) {
         try {
@@ -317,6 +301,8 @@ function initPaidForm() {
                  paymentData.payment_status === 'success')) {
                 paymentDone = true;
                 updatePaymentUI(true);
+                
+                // Form data restore karein
                 restoreFormData();
                 
                 const submitBtn = $('submitBtn');
@@ -342,6 +328,7 @@ function initPaidForm() {
                 return false;
             }
             
+            // Save form data BEFORE redirect
             try {
                 const formData = collectPaidFormData();
                 sessionStorage.setItem('tempPaidData', JSON.stringify(formData));
@@ -350,6 +337,7 @@ function initPaidForm() {
                 debug('⚠️ Save failed', err); 
             }
             
+            // Redirect to Razorpay with return_url
             const razorpayUrl = new URL(CONFIG.PAYMENT_LINK);
             razorpayUrl.searchParams.set('return_url', CONFIG.RETURN_URL);
             
@@ -360,6 +348,7 @@ function initPaidForm() {
         });
     }
     
+    // Form submit handler
     newForm.addEventListener('submit', (e) => {
         e.preventDefault();
         if (!isSubmitting && paymentDone) {
@@ -369,6 +358,7 @@ function initPaidForm() {
         }
     });
     
+    // Field validation
     ['name', 'email', 'phone', 'city', 'employees', 'designation', 'company'].forEach(id => {
         const field = $(id);
         if (field) {
@@ -756,21 +746,16 @@ function showToast(message, type = 'info') {
 function resetAll() {
     $('successMsg')?.classList.add('hidden');
     resetFeedbackForm(); resetPaidForm();
-    isSubmitting = false;
-    window.location.href = window.location.origin + window.location.pathname;
+    isSubmitting = false; showView('landing');
+    if (window.history.replaceState) window.history.replaceState({}, document.title, CONFIG.RETURN_URL);
 }
 
 // Event Listeners
 window.addEventListener('popstate', () => {
-    if (!paymentDone && !window.location.search.includes('razorpay_')) { 
-        debug('⬅️ Back - resetting'); 
-        resetAll(); 
-    }
+    if (!paymentDone && !window.location.search.includes('razorpay_')) { debug('⬅️ Back - resetting'); resetAll(); }
 });
 
-window.addEventListener('beforeunload', () => { 
-    try { sessionStorage.removeItem('tempPaidData'); } catch (e) {} 
-});
+window.addEventListener('beforeunload', () => { try { sessionStorage.removeItem('tempPaidData'); } catch (e) {} });
 
 document.addEventListener('focusin', (e) => {
     if (e.target.tagName === 'INPUT' && window.innerWidth < 500) {
@@ -803,4 +788,4 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-debug('🎯 System Ready - 2 URL Version - Payment → Paid Form');
+debug('🎯 System Ready - Auto-Submit Enabled - Single Entry Guarantee');
