@@ -120,13 +120,13 @@ function handlePaymentReturn() {
 }
 
 // 🔥 Process Payment & AUTO SUBMIT
+// 🔥 Process Payment & AUTO SUBMIT
 function processSuccessfulPayment(paymentId, orderId) {
     // ✅ Prevent duplicate processing
     if (paymentDone) {
         debug('⚠️ Payment already processed');
         return;
     }
-    
     paymentDone = true;
     paymentData = {
         razorpay_payment_id: paymentId,
@@ -135,13 +135,18 @@ function processSuccessfulPayment(paymentId, orderId) {
         payment_status: "captured",
         payment_link_id: "IRE79PZ"
     };
-    
     try {
         sessionStorage.setItem('paymentData', JSON.stringify(paymentData));
         debug('💾 Payment data saved');
     } catch (e) { debug('⚠️ Session save failed', e); }
     
+    // ✅ UI Update
     updatePaymentUI(true);
+    restoreFormData();
+    
+    // ✅ FIX 2: Turant Audit Form (Paid View) par le jao
+    // Pehle landing page flash nahi hoga
+    showView('paid'); 
     
     const submitBtn = $('submitBtn');
     if (submitBtn) {
@@ -149,21 +154,15 @@ function processSuccessfulPayment(paymentId, orderId) {
         submitBtn.innerHTML = '<i class="fas fa-check"></i> Complete Registration';
         submitBtn.classList.add('pulse-animation');
     }
-    
-    restoreFormData();
-    
-    // ✅ SINGLE auto-submit - removed duplicate setTimeout
+
+    // ✅ Auto-submit logic (Optional - Agar auto submit chahiye toh rakho, nahi toh user click karega)
     setTimeout(() => {
         if (currentView === 'paid' && validatePaidForm() && !isSubmitting) {
             debug('🔄 AUTO-SUBMITTING after payment...');
             showToast('🔄 Processing registration...', 'info');
             handlePaidSubmit(null, true);
-        } else if (!isSubmitting) {
-            showView('paid');
-            // ✅ Only show message, don't auto-submit again
-            showToast('✅ Payment Successful! Click "Complete Registration"', 'success');
         }
-    }, 1500);
+    }, 2000); // 2 second baad auto submit try karega agar form valid hai
 }
 
 // Restore Form Data
@@ -194,16 +193,24 @@ function cleanURL() {
 }
 
 // DOM Ready
+// DOM Ready
 document.addEventListener('DOMContentLoaded', () => {
     debug('🚀 DOM Loaded');
-    showView('landing');
     
+    // ✅ FIX 1: Pehle Payment Check karo, fir View decide karo
+    // Agar payment successful hai, toh Landing Page mat dikhao
+    const paymentHandled = handlePaymentReturn();
+    
+    if (!paymentHandled) {
+        showView('landing'); // Sirf tab dikhao jab payment na hui ho
+    }
+
+    // Button Listeners
     $('showFeedbackBtn')?.addEventListener('click', (e) => {
         e.preventDefault();
         showView('feedback');
         initFeedbackForm();
     });
-    
     $('showPaidBtn')?.addEventListener('click', (e) => {
         e.preventDefault();
         showView('paid');
@@ -213,7 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initFeedbackForm();
     initPaidForm();
     
-    setTimeout(() => { handlePaymentReturn(); }, 500);
+    // ✅ Removed setTimeout here, already checked above
 });
 
 // Initialize Forms
