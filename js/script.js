@@ -121,6 +121,7 @@ function handlePaymentReturn() {
 
 // 🔥 Process Payment & AUTO SUBMIT
 // 🔥 Process Payment & AUTO SUBMIT
+// 🔥 Process Payment & AUTO SUBMIT - CORRECTED
 function processSuccessfulPayment(paymentId, orderId) {
     // ✅ Prevent duplicate processing
     if (paymentDone) {
@@ -140,29 +141,33 @@ function processSuccessfulPayment(paymentId, orderId) {
         debug('💾 Payment data saved');
     } catch (e) { debug('⚠️ Session save failed', e); }
     
-    // ✅ UI Update
-    updatePaymentUI(true);
+    // ✅ STEP 1: Pehle form data restore karo
     restoreFormData();
     
-    // ✅ FIX 2: Turant Audit Form (Paid View) par le jao
-    // Pehle landing page flash nahi hoga
-    showView('paid'); 
+    // ✅ STEP 2: Payment UI update karo
+    updatePaymentUI(true);
     
+    // ✅ STEP 3: Submit button enable karo
     const submitBtn = $('submitBtn');
     if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i class="fas fa-check"></i> Complete Registration';
         submitBtn.classList.add('pulse-animation');
     }
-
-    // ✅ Auto-submit logic (Optional - Agar auto submit chahiye toh rakho, nahi toh user click karega)
+    
+    // ✅ STEP 4: AB paid form dikhao (sab kuch ready hone ke baad)
     setTimeout(() => {
-        if (currentView === 'paid' && validatePaidForm() && !isSubmitting) {
-            debug('🔄 AUTO-SUBMITTING after payment...');
-            showToast('🔄 Processing registration...', 'info');
-            handlePaidSubmit(null, true);
-        }
-    }, 2000); // 2 second baad auto submit try karega agar form valid hai
+        showView('paid');
+        showToast('✅ Payment Successful! Click "Complete Registration"', 'success');
+        
+        // ✅ Auto-submit after 2 seconds (optional)
+        setTimeout(() => {
+            if (currentView === 'paid' && validatePaidForm() && !isSubmitting) {
+                debug('🔄 AUTO-SUBMITTING after payment...');
+                handlePaidSubmit(null, true);
+            }
+        }, 2000);
+    }, 100); // 100ms delay to ensure DOM is ready
 }
 
 // Restore Form Data
@@ -194,16 +199,20 @@ function cleanURL() {
 
 // DOM Ready
 // DOM Ready
+// DOM Ready - CORRECTED VERSION
 document.addEventListener('DOMContentLoaded', () => {
     debug('🚀 DOM Loaded');
     
-    // ✅ FIX 1: Pehle Payment Check karo, fir View decide karo
-    // Agar payment successful hai, toh Landing Page mat dikhao
+    // ✅ STEP 1: Pehle payment check karo
     const paymentHandled = handlePaymentReturn();
     
+    // ✅ STEP 2: Agar payment successful hai, toh paid form dikhao
+    // Agar nahi hai, tab hi landing page dikhao
     if (!paymentHandled) {
-        showView('landing'); // Sirf tab dikhao jab payment na hui ho
+        showView('landing');
     }
+    // Agar paymentHandled = true, toh handlePaymentReturn() ne already
+    // processSuccessfulPayment() call kar diya hai jo showView('paid') karta hai
 
     // Button Listeners
     $('showFeedbackBtn')?.addEventListener('click', (e) => {
@@ -211,6 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showView('feedback');
         initFeedbackForm();
     });
+    
     $('showPaidBtn')?.addEventListener('click', (e) => {
         e.preventDefault();
         showView('paid');
@@ -220,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initFeedbackForm();
     initPaidForm();
     
-    // ✅ Removed setTimeout here, already checked above
+    // ❌ Remove setTimeout from here - already handled above
 });
 
 // Initialize Forms
