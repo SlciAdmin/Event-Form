@@ -7,7 +7,7 @@ const CONFIG = {
     PAYMENT_LINK: "https://rzp.io/rzp/5NCrTAI",  // ✅ कोई space नहीं
     AMOUNT: 1,
     CURRENCY: "INR",
-    GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbxaUqg1BoYgstjnBgZ05ikfm0WORRIqeX-Nf35N-e-PNTYof3BjVBuPaQoMxtu2TXTN2g/exec",  // ✅ कोई space नहीं
+    GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbzdzpzP-bxaKy904nz5LUXLGtIy4-kTL-cQ4cKxtaBIT1y9xCTMPtLBHrUvQ3MzBTDkEw/exec",  // ✅ कोई space नहीं
     RETURN_URL: window.location.href.split('?')[0],
     DEBUG: true
 };
