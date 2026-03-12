@@ -1,5 +1,9 @@
-// Google Apps Script URL (Replace with your actual URL)
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxCi1bxcnHGbD-b8xnQYvFe1Y6BU8NinfCZcmxy1iYKhU3SEEjZu3NL_tYbIXLSGPPtkw/exec";
+// ============================================================================
+// FEEDBACK FORM - GOOGLE SHEETS INTEGRATION
+// URL: https://script.google.com/macros/s/AKfycbz_KuFcQG_-voZY3UZvRIem3bEjEni8fbAq3rFtElP6yDi3YJ9ZeeaGZrqUWeZIqTM6sg/exec
+// ============================================================================
+
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz_KuFcQG_-voZY3UZvRIem3bEjEni8fbAq3rFtElP6yDi3YJ9ZeeaGZrqUWeZIqTM6sg/exec";
 
 // DOM Elements
 const form = document.getElementById('feedbackForm');
@@ -11,29 +15,30 @@ const loaderText = document.querySelector('#loader p');
 
 let isSubmitting = false;
 
-// Show Toast Message
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
 function showToast(message, type = 'info') {
     toast.textContent = message;
     toast.className = `toast ${type}`;
     toast.classList.remove('hidden');
-    
-    setTimeout(() => {
-        toast.classList.add('hidden');
-    }, 3000);
+    setTimeout(() => toast.classList.add('hidden'), 3000);
 }
 
-// Show Loader
 function showLoader(text) {
     loaderText.textContent = text;
     loader.classList.remove('hidden');
 }
 
-// Hide Loader
 function hideLoader() {
     loader.classList.add('hidden');
 }
 
-// Validate Individual Field
+// ============================================================================
+// VALIDATION FUNCTIONS
+// ============================================================================
+
 function validateField(field) {
     const value = field.value.trim();
     
@@ -64,7 +69,6 @@ function validateField(field) {
     return true;
 }
 
-// Validate Entire Form
 function validateForm() {
     let isValid = true;
     const requiredFields = form.querySelectorAll('input[required], textarea[required]');
@@ -73,7 +77,6 @@ function validateForm() {
         if (!validateField(field)) isValid = false;
     });
     
-    // Check if rating is selected
     const ratingSelected = document.querySelector('input[name="fb_rating"]:checked');
     if (!ratingSelected) {
         showToast('Please select a rating', 'error');
@@ -83,7 +86,10 @@ function validateForm() {
     return isValid;
 }
 
-// Collect Form Data
+// ============================================================================
+// DATA COLLECTION & SUBMISSION
+// ============================================================================
+
 function collectFormData() {
     const rating = document.querySelector('input[name="fb_rating"]:checked')?.value || 'Not rated';
     
@@ -103,23 +109,19 @@ function collectFormData() {
     };
 }
 
-// Submit to Google Sheets
 async function submitToGoogleSheets(data) {
     try {
-        const response = await fetch(GOOGLE_SCRIPT_URL, {
+        await fetch(GOOGLE_SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-        
         return true;
     } catch (error) {
         console.error('Submission error:', error);
         
-        // Save to localStorage as backup
+        // Backup to localStorage
         const backups = JSON.parse(localStorage.getItem('feedbackBackups') || '[]');
         backups.push({ ...data, backup_time: new Date().toISOString() });
         localStorage.setItem('feedbackBackups', JSON.stringify(backups));
@@ -128,12 +130,14 @@ async function submitToGoogleSheets(data) {
     }
 }
 
-// Handle Form Submit
+// ============================================================================
+// FORM SUBMIT HANDLER
+// ============================================================================
+
 async function handleSubmit(e) {
     e.preventDefault();
     
     if (isSubmitting) return;
-    
     if (!validateForm()) return;
     
     isSubmitting = true;
@@ -144,14 +148,11 @@ async function handleSubmit(e) {
         const formData = collectFormData();
         await submitToGoogleSheets(formData);
         
-        // Show success message
         form.classList.add('hidden');
         successMsg.classList.remove('hidden');
         
     } catch (error) {
         showToast('Feedback saved locally. Will sync when online.', 'warning');
-        
-        // Still show success to user
         form.classList.add('hidden');
         successMsg.classList.remove('hidden');
         
@@ -161,22 +162,22 @@ async function handleSubmit(e) {
     }
 }
 
-// Reset Form
+// ============================================================================
+// EVENT LISTENERS & INITIALIZATION
+// ============================================================================
+
 function resetForm() {
     form.reset();
     form.querySelectorAll('.invalid').forEach(f => f.classList.remove('invalid'));
 }
 
-// Live Validation
+// Live validation
 form.querySelectorAll('input, textarea').forEach(field => {
     field.addEventListener('blur', () => validateField(field));
     field.addEventListener('input', () => field.classList.remove('invalid'));
 });
 
-// Submit Event
-form.addEventListener('submit', handleSubmit);
-
-// Star Rating Accessibility
+// Star rating accessibility
 document.querySelectorAll('.star-rating label').forEach(label => {
     label.setAttribute('tabindex', '0');
     label.addEventListener('keydown', (e) => {
@@ -187,4 +188,7 @@ document.querySelectorAll('.star-rating label').forEach(label => {
     });
 });
 
-console.log('Feedback form initialized');
+// Submit event
+form.addEventListener('submit', handleSubmit);
+
+console.log('✅ Feedback form initialized - URL:', GOOGLE_SCRIPT_URL);
