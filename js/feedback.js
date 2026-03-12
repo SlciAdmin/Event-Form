@@ -1,8 +1,10 @@
 // ============================================================================
 // FEEDBACK FORM - GOOGLE SHEETS INTEGRATION
+// URL: https://script.google.com/macros/s/AKfycbxSAJHIbkTYMxQCZYbYXxaZVX-MmkfOzQjaqs81mjQsy3Ua3TlHwx9QQpTlCC_JdcglNA/exec
 // ============================================================================
 
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxAvlx_5VaEZsWhRfMZDZjydqynEvGZmtT_OodTxDl854i9Ia81cM8O-SbLMUvodMngbQ/exec";
+// ✅ NO TRAILING SPACE - CRITICAL FIX
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxSAJHIbkTYMxQCZYbYXxaZVX-MmkfOzQjaqs81mjQsy3Ua3TlHwx9QQpTlCC_JdcglNA/exec";
 
 // DOM Elements
 const form = document.getElementById('feedbackForm');

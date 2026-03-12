@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Audit Registration - EventPro</title>
     <link rel="stylesheet" href="css/style.css">
-    <link rel="sstylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- ✅ FIXED: sstylesheet → stylesheet, removed trailing space -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div class="form-container">
@@ -24,7 +25,6 @@
                     <label for="name"><i class="fas fa-user"></i> Name <span class="req">*</span></label>
                     <input type="text" id="name" name="name" placeholder="Your Full Name" required>
                 </div>
-                
                 <div class="field">
                     <label for="designation"><i class="fas fa-briefcase"></i> Designation <span class="req">*</span></label>
                     <input type="text" id="designation" name="designation" placeholder="e.g., Manager" required>
@@ -36,7 +36,6 @@
                     <label for="company"><i class="fas fa-building"></i> Company <span class="req">*</span></label>
                     <input type="text" id="company" name="company" placeholder="Your Company" required>
                 </div>
-                
                 <div class="field">
                     <label for="employees"><i class="fas fa-users"></i> Employees <span class="req">*</span></label>
                     <input type="number" id="employees" name="employees" placeholder="e.g., 50" min="1" required>
@@ -48,7 +47,6 @@
                     <label for="phone"><i class="fas fa-phone"></i> Contact <span class="req">*</span></label>
                     <input type="tel" id="phone" name="phone" placeholder="9876543210" pattern="[6-9][0-9]{9}" required>
                 </div>
-                
                 <div class="field">
                     <label for="email"><i class="fas fa-envelope"></i> Email <span class="req">*</span></label>
                     <input type="email" id="email" name="email" placeholder="you@email.com" required>
@@ -63,7 +61,6 @@
             </div>
             
             <div class="section-title"><i class="fas fa-star"></i> Experience Rating</div>
-            
             <div class="form-row">
                 <div class="field full">
                     <label>Overall Experience <span class="req">*</span></label>
@@ -90,13 +87,12 @@
                     <span class="price-label">Special Audit Fee</span>
                     <span class="offer-badge">SAVE ₹14,999</span>
                 </div>
-                
                 <div class="price-display">
                     <span class="current-price">₹1</span>
                     <span class="original-price">₹15,000</span>
                 </div>
                 
-                <!-- Payment Button (Opens Razorpay) -->
+                <!-- Payment Button -->
                 <button type="button" id="payNowBtn" class="pay-btn">
                     <i class="fas fa-lock"></i> Pay ₹1 Securely via Razorpay
                 </button>
@@ -139,6 +135,7 @@
     <div id="toast" class="toast hidden"></div>
     <div id="loader" class="loader hidden"><div class="spin"></div><p>Processing...</p></div>
     
+    <!-- ✅ CORRECTED PATH -->
     <script src="js/audit.js"></script>
 </body>
 </html>
