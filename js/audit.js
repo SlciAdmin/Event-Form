@@ -1,9 +1,9 @@
 // ============================================================================
-// AUDIT REGISTRATION FORM - GOOGLE SHEETS + RAZORPAY INTEGRATION
+// AUDIT REGISTRATION - AUTO PAYMENT DETECTION & GOOGLE SHEETS
 // ============================================================================
 
 const CONFIG = {
-    // ✅ NO TRAILING SPACES - CRITICAL FIX
+    // ✅ NO TRAILING SPACES
     PAYMENT_LINK: "https://rzp.io/rzp/5NCrTAI",
     GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbxSAJHIbkTYMxQCZYbYXxaZVX-MmkfOzQjaqs81mjQsy3Ua3TlHwx9QQpTlCC_JdcglNA/exec",
     RETURN_URL: window.location.origin + window.location.pathname
@@ -49,32 +49,28 @@ function hideLoader() {
 }
 
 // ============================================================================
-// 🔥 PAYMENT RETURN HANDLING - FIXED LOGIC
+// 🔥 AUTO PAYMENT DETECTION - PAGE LOAD PAR CHECK
 // ============================================================================
 
 function checkPaymentReturn() {
     const urlParams = new URLSearchParams(window.location.search);
+    const params = Object.fromEntries(urlParams.entries());
     
-    console.log('🔍 URL Params:', Object.fromEntries(urlParams.entries()));
+    console.log('🔍 URL Parameters:', params);
+    console.log('🔍 Full URL:', window.location.href);
     
-    // Razorpay returns these parameters (multiple possible names)
-    const paymentId = urlParams.get('razorpay_payment_id') || 
-                     urlParams.get('payment_id') || 
-                     urlParams.get('razorpay_paymentId');
+    // Razorpay returns these parameters
+    const paymentId = params.razorpay_payment_id || params.payment_id;
+    const orderId = params.razorpay_order_id || params.order_id;
+    const signature = params.razorpay_signature || params.signature;
+    const status = params.razorpay_payment_status || params.status || params.payment_status;
     
-    const orderId = urlParams.get('razorpay_order_id') || 
-                   urlParams.get('order_id') || 
-                   urlParams.get('razorpay_orderId');
+    console.log('💳 Payment Details:', { paymentId, orderId, status });
     
-    const signature = urlParams.get('razorpay_signature') || urlParams.get('signature');
-    const status = urlParams.get('razorpay_payment_status') || 
-                  urlParams.get('status') || 
-                  urlParams.get('payment_status');
-    
-    console.log('🔍 Payment Check:', { paymentId, orderId, status });
-    
-    // ✅ If paymentId exists, payment was successful
+    // ✅ Check if payment ID exists and starts with 'pay_'
     if (paymentId && paymentId.startsWith('pay_')) {
+        console.log('✅ Payment detected! ID:', paymentId);
+        
         paymentData = {
             razorpay_payment_id: paymentId,
             razorpay_order_id: orderId || 'ORDER_' + Date.now(),
@@ -82,15 +78,13 @@ function checkPaymentReturn() {
             payment_status: 'captured'
         };
         
-        console.log('✅ Payment Captured:', paymentData);
-        
-        // Save to session storage
+        // Save to session
         sessionStorage.setItem('auditPayment', JSON.stringify(paymentData));
         
         // Restore form data
         restoreFormData();
         
-        // ✅ Update UI - THIS IS THE KEY FIX
+        // ✅ UPDATE UI AUTOMATICALLY
         paymentDone = true;
         paymentStatus.innerHTML = '✅ Payment Successful!<br><small>ID: ' + paymentId + '</small>';
         paymentStatus.className = 'payment-status success';
@@ -100,30 +94,46 @@ function checkPaymentReturn() {
         
         showToast('Payment successful! Click "Complete Registration"', 'success');
         
-        // Clean URL
-        window.history.replaceState({}, document.title, CONFIG.RETURN_URL);
+        // Clean URL (remove payment params)
+        const cleanUrl = CONFIG.RETURN_URL;
+        window.history.replaceState({}, document.title, cleanUrl);
+        
+        // ✅ AUTO-SUBMIT AFTER 2 SECONDS
+        setTimeout(() => {
+            if (paymentDone && !isSubmitting) {
+                console.log('🚀 Auto-submitting registration...');
+                completeBtn.click();
+            }
+        }, 2000);
         
         return true;
     }
     
-    // ✅ Also check if status explicitly says success
-    if (status && (status.toLowerCase() === 'success' || status.toLowerCase() === 'captured' || status.toLowerCase() === 'paid')) {
+    // ✅ Also check status parameter
+    if (status && ['success', 'captured', 'paid'].includes(status.toLowerCase())) {
         console.log('✅ Status-based payment detection');
-        paymentData.payment_status = 'captured';
         paymentDone = true;
         paymentStatus.innerHTML = '✅ Payment Successful!';
         paymentStatus.className = 'payment-status success';
         payBtn.disabled = true;
         payBtn.style.opacity = '0.6';
         completeBtn.disabled = false;
-        showToast('Payment successful! Complete registration', 'success');
+        showToast('Payment successful!', 'success');
+        
+        // Auto-submit
+        setTimeout(() => {
+            if (paymentDone && !isSubmitting) {
+                completeBtn.click();
+            }
+        }, 2000);
+        
         return true;
     }
     
     return false;
 }
 
-// Check session storage (page refresh scenario)
+// Check session storage (page refresh)
 function checkSessionPayment() {
     const savedPayment = sessionStorage.getItem('auditPayment');
     if (savedPayment) {
@@ -140,16 +150,24 @@ function checkSessionPayment() {
                 completeBtn.disabled = false;
                 
                 restoreFormData();
+                
+                // Auto-submit
+                setTimeout(() => {
+                    if (paymentDone && !isSubmitting) {
+                        completeBtn.click();
+                    }
+                }, 2000);
+                
                 return true;
             }
         } catch (e) {
-            console.error('Session parse error', e);
+            console.error('Session error:', e);
         }
     }
     return false;
 }
 
-// Restore form fields from session
+// Restore form data
 function restoreFormData() {
     const savedData = sessionStorage.getItem('auditFormData');
     if (savedData) {
@@ -159,14 +177,14 @@ function restoreFormData() {
                 const field = document.getElementById(id);
                 if (field && data[id]) field.value = data[id];
             });
-            console.log('🔄 Form data restored');
+            console.log('🔄 Form restored');
         } catch (e) {
-            console.error('Restore error', e);
+            console.error('Restore error:', e);
         }
     }
 }
 
-// Save form data before payment redirect
+// Save form data before payment
 function saveFormData() {
     const formData = {
         name: document.getElementById('name').value,
@@ -179,11 +197,11 @@ function saveFormData() {
         remarks: document.getElementById('remarks').value
     };
     sessionStorage.setItem('auditFormData', JSON.stringify(formData));
-    console.log('💾 Form data saved');
+    console.log('💾 Form saved');
 }
 
 // ============================================================================
-// VALIDATION FUNCTIONS
+// VALIDATION
 // ============================================================================
 
 function validateField(field) {
@@ -196,19 +214,13 @@ function validateField(field) {
     
     if (field.type === 'email' && value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
         field.classList.add('invalid');
-        showToast('Please enter a valid email', 'error');
+        showToast('Invalid email', 'error');
         return false;
     }
     
     if (field.type === 'tel' && value && !/^[6-9][0-9]{9}$/.test(value)) {
         field.classList.add('invalid');
-        showToast('Please enter valid 10-digit number', 'error');
-        return false;
-    }
-    
-    if (field.type === 'number' && value && (isNaN(value) || value < 1)) {
-        field.classList.add('invalid');
-        showToast('Please enter valid number', 'error');
+        showToast('Invalid phone', 'error');
         return false;
     }
     
@@ -218,15 +230,13 @@ function validateField(field) {
 
 function validateFormForPayment() {
     let isValid = true;
-    const requiredFields = ['name', 'designation', 'company', 'employees', 'phone', 'email', 'city'];
-    
-    requiredFields.forEach(id => {
+    ['name', 'designation', 'company', 'employees', 'phone', 'email', 'city'].forEach(id => {
         const field = document.getElementById(id);
         if (field && !validateField(field)) isValid = false;
     });
     
     if (!document.querySelector('input[name="audit_rating"]:checked')) {
-        showToast('Please select a rating', 'error');
+        showToast('Select rating', 'error');
         isValid = false;
     }
     
@@ -235,15 +245,13 @@ function validateFormForPayment() {
 
 function validateFormForSubmit() {
     let isValid = true;
-    const requiredFields = ['name', 'designation', 'company', 'employees', 'phone', 'email', 'city'];
-    
-    requiredFields.forEach(id => {
+    ['name', 'designation', 'company', 'employees', 'phone', 'email', 'city'].forEach(id => {
         const field = document.getElementById(id);
         if (field && !validateField(field)) isValid = false;
     });
     
     if (!document.querySelector('input[name="audit_rating"]:checked')) {
-        showToast('Please select a rating', 'error');
+        showToast('Select rating', 'error');
         isValid = false;
     }
     
@@ -255,7 +263,7 @@ function validateFormForSubmit() {
 // ============================================================================
 
 function collectFormData() {
-    const rating = document.querySelector('input[name="audit_rating"]:checked')?.value || 'Not rated';
+    const rating = document.querySelector('input[name="audit_rating"]:checked')?.value || '5';
     
     return {
         name: document.getElementById('name').value.trim(),
@@ -288,11 +296,10 @@ async function submitToGoogleSheets(data) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-        console.log('✅ Data sent successfully');
+        console.log('✅ Data sent successfully!');
         return true;
     } catch (error) {
-        console.error('❌ Submission error:', error);
-        
+        console.error('❌ Error:', error);
         const backups = JSON.parse(localStorage.getItem('auditBackups') || '[]');
         backups.push({ ...data, backup_time: new Date().toISOString() });
         localStorage.setItem('auditBackups', JSON.stringify(backups));
@@ -306,16 +313,16 @@ async function submitToGoogleSheets(data) {
 
 payBtn.addEventListener('click', (e) => {
     e.preventDefault();
-    console.log('💳 Payment button clicked');
+    console.log('💳 Pay button clicked');
     
     if (!validateFormForPayment()) {
-        showToast('Please fill all required fields', 'error');
+        showToast('Fill all fields', 'error');
         return;
     }
     
     saveFormData();
     
-    // ✅ Add return URLs to payment link (CRITICAL FOR REDIRECT)
+    // Add return URL
     const paymentUrl = new URL(CONFIG.PAYMENT_LINK.trim());
     paymentUrl.searchParams.set('redirect_url', CONFIG.RETURN_URL);
     paymentUrl.searchParams.set('return_url', CONFIG.RETURN_URL);
@@ -325,19 +332,16 @@ payBtn.addEventListener('click', (e) => {
 });
 
 async function handleSubmit(e) {
-    e.preventDefault();
+    if (e) e.preventDefault();
     console.log('📝 Complete Registration clicked');
     
     if (!paymentDone) {
-        showToast('Please complete payment first', 'error');
+        showToast('Complete payment first', 'error');
         return;
     }
     
     if (isSubmitting) return;
-    if (!validateFormForSubmit()) {
-        showToast('Please fill all required fields', 'error');
-        return;
-    }
+    if (!validateFormForSubmit()) return;
     
     isSubmitting = true;
     completeBtn.disabled = true;
@@ -345,7 +349,7 @@ async function handleSubmit(e) {
     
     try {
         const formData = collectFormData();
-        console.log('📊 Final Form Data:', formData);
+        console.log('📊 Data:', formData);
         
         await submitToGoogleSheets(formData);
         
@@ -359,11 +363,11 @@ async function handleSubmit(e) {
         sessionStorage.removeItem('auditPayment');
         sessionStorage.removeItem('auditFormData');
         
-        showToast('Registration completed successfully!', 'success');
+        showToast('Registration complete!', 'success');
         
     } catch (error) {
         console.error('Error:', error);
-        showToast('Registration saved locally', 'warning');
+        showToast('Saved locally', 'warning');
         
         document.getElementById('receiptName').textContent = document.getElementById('name').value;
         document.getElementById('receiptEmail').textContent = document.getElementById('email').value;
@@ -379,25 +383,25 @@ async function handleSubmit(e) {
 }
 
 // ============================================================================
-// INITIALIZATION
+// INITIALIZATION - AUTO CHECK ON PAGE LOAD
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 Audit form initialized');
+    console.log('🚀 Audit form loaded');
+    console.log('📍 URL:', window.location.href);
     console.log('🔧 Config:', {
         PAYMENT_LINK: CONFIG.PAYMENT_LINK.trim(),
-        GOOGLE_SCRIPT: CONFIG.GOOGLE_SCRIPT.trim(),
-        RETURN_URL: CONFIG.RETURN_URL
+        GOOGLE_SCRIPT: CONFIG.GOOGLE_SCRIPT.trim()
     });
     
-    // ✅ Check payment return FIRST (most important)
-    const paymentHandled = checkPaymentReturn();
+    // ✅ AUTO CHECK PAYMENT ON PAGE LOAD
+    const paymentDetected = checkPaymentReturn();
     
-    if (!paymentHandled) {
+    if (!paymentDetected) {
         checkSessionPayment();
     }
     
-    // Live validation
+    // Validation
     ['name', 'designation', 'company', 'employees', 'phone', 'email', 'city'].forEach(id => {
         const field = document.getElementById(id);
         if (field) {

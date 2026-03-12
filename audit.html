@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Audit Registration - EventPro</title>
     <link rel="stylesheet" href="css/style.css">
-    <!-- ✅ FIXED: Removed trailing space from Font Awesome URL -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -90,7 +89,6 @@
                     <span class="original-price">₹15,000</span>
                 </div>
                 
-                <!-- Payment Button -->
                 <button type="button" id="payNowBtn" class="pay-btn">
                     <i class="fas fa-lock"></i> Pay ₹1 Securely via Razorpay
                 </button>
@@ -106,13 +104,11 @@
                 </div>
             </div>
             
-            <!-- Submit Button (Enabled Only After Payment) -->
             <button type="submit" id="completeBtn" class="btn-complete" disabled>
                 <i class="fas fa-check-circle"></i> Complete Registration
             </button>
         </form>
         
-        <!-- Success Message -->
         <div id="auditSuccessMsg" class="success-message hidden">
             <div class="success-icon"><i class="fas fa-check-circle"></i></div>
             <h3>Registration Successful!</h3>
@@ -133,7 +129,7 @@
     <div id="toast" class="toast hidden"></div>
     <div id="loader" class="loader hidden"><div class="spin"></div><p>Processing...</p></div>
     
-    <!-- ✅ CORRECTED: Use js/ folder path -->
-    <script src="js/audit.js"></script>
+    <!-- ✅ CORRECTED: Script in same folder -->
+    <script src="audit.js"></script>
 </body>
 </html>
