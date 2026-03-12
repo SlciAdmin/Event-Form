@@ -1,7 +1,7 @@
 // Configuration
 const CONFIG = {
     PAYMENT_LINK: "https://rzp.io/rzp/5NCrTAI",
-    GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbw5BWAINRLGY5pEZVTVlPjlks_XgeNdOAJtrI3Yl0MzbOrS8EcyWWu50jdgiFkrlFp5-Q/exec",
+    GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbxCi1bxcnHGbD-b8xnQYvFe1Y6BU8NinfCZcmxy1iYKhU3SEEjZu3NL_tYbIXLSGPPtkw/exec",
     RETURN_URL: window.location.href.split('?')[0]  // Current page without query params
 };
 

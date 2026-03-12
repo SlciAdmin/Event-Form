@@ -1,5 +1,5 @@
 // Google Apps Script URL (Replace with your actual URL)
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw5BWAINRLGY5pEZVTVlPjlks_XgeNdOAJtrI3Yl0MzbOrS8EcyWWu50jdgiFkrlFp5-Q/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxCi1bxcnHGbD-b8xnQYvFe1Y6BU8NinfCZcmxy1iYKhU3SEEjZu3NL_tYbIXLSGPPtkw/exec";
 
 // DOM Elements
 const form = document.getElementById('feedbackForm');
