@@ -1,9 +1,8 @@
 // ============================================================================
 // FEEDBACK FORM - GOOGLE SHEETS INTEGRATION
-// URL: https://script.google.com/macros/s/AKfycbz_KuFcQG_-voZY3UZvRIem3bEjEni8fbAq3rFtElP6yDi3YJ9ZeeaGZrqUWeZIqTM6sg/exec
 // ============================================================================
 
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz_KuFcQG_-voZY3UZvRIem3bEjEni8fbAq3rFtElP6yDi3YJ9ZeeaGZrqUWeZIqTM6sg/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxAvlx_5VaEZsWhRfMZDZjydqynEvGZmtT_OodTxDl854i9Ia81cM8O-SbLMUvodMngbQ/exec";
 
 // DOM Elements
 const form = document.getElementById('feedbackForm');
@@ -110,6 +109,8 @@ function collectFormData() {
 }
 
 async function submitToGoogleSheets(data) {
+    console.log('📤 Sending feedback data:', data);
+    
     try {
         await fetch(GOOGLE_SCRIPT_URL, {
             method: 'POST',
@@ -117,9 +118,10 @@ async function submitToGoogleSheets(data) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
+        console.log('✅ Data sent to Google Sheets');
         return true;
     } catch (error) {
-        console.error('Submission error:', error);
+        console.error('❌ Submission error:', error);
         
         // Backup to localStorage
         const backups = JSON.parse(localStorage.getItem('feedbackBackups') || '[]');
