@@ -5,18 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Audit Registration - EventPro</title>
     <link rel="stylesheet" href="css/style.css">
-    <!-- ✅ FIXED: sstylesheet → stylesheet, removed trailing space -->
+    <!-- ✅ FIXED: Removed trailing space from Font Awesome URL -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div class="form-container">
-        <!-- Header with Back Button -->
         <div class="form-nav">
             <a href="index.html" class="back-btn"><i class="fas fa-arrow-left"></i> Back</a>
             <h2><i class="fas fa-clipboard-check"></i> Audit Registration</h2>
         </div>
         
-        <!-- Registration Form -->
         <form id="auditForm" class="main-form" novalidate>
             <div class="section-title"><i class="fas fa-user-circle"></i> Your Details</div>
             
@@ -114,7 +112,7 @@
             </button>
         </form>
         
-        <!-- Success Message (Hidden Initially) -->
+        <!-- Success Message -->
         <div id="auditSuccessMsg" class="success-message hidden">
             <div class="success-icon"><i class="fas fa-check-circle"></i></div>
             <h3>Registration Successful!</h3>
@@ -135,7 +133,7 @@
     <div id="toast" class="toast hidden"></div>
     <div id="loader" class="loader hidden"><div class="spin"></div><p>Processing...</p></div>
     
-    <!-- ✅ CORRECTED PATH -->
+    <!-- ✅ CORRECTED: Use js/ folder path -->
     <script src="js/audit.js"></script>
 </body>
 </html>

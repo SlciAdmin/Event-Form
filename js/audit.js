@@ -1,6 +1,5 @@
 // ============================================================================
 // AUDIT REGISTRATION FORM - GOOGLE SHEETS + RAZORPAY INTEGRATION
-// URL: https://script.google.com/macros/s/AKfycbxSAJHIbkTYMxQCZYbYXxaZVX-MmkfOzQjaqs81mjQsy3Ua3TlHwx9QQpTlCC_JdcglNA/exec
 // ============================================================================
 
 const CONFIG = {
@@ -50,20 +49,32 @@ function hideLoader() {
 }
 
 // ============================================================================
-// PAYMENT RETURN HANDLING (After Razorpay Redirect)
+// 🔥 PAYMENT RETURN HANDLING - FIXED LOGIC
 // ============================================================================
 
 function checkPaymentReturn() {
     const urlParams = new URLSearchParams(window.location.search);
     
-    const paymentId = urlParams.get('razorpay_payment_id') || urlParams.get('payment_id');
-    const orderId = urlParams.get('razorpay_order_id') || urlParams.get('order_id');
-    const signature = urlParams.get('razorpay_signature');
-    const status = urlParams.get('razorpay_payment_status') || urlParams.get('status');
+    console.log('🔍 URL Params:', Object.fromEntries(urlParams.entries()));
     
-    console.log('🔍 Payment Return Check:', { paymentId, orderId, status });
+    // Razorpay returns these parameters (multiple possible names)
+    const paymentId = urlParams.get('razorpay_payment_id') || 
+                     urlParams.get('payment_id') || 
+                     urlParams.get('razorpay_paymentId');
     
-    if (paymentId) {
+    const orderId = urlParams.get('razorpay_order_id') || 
+                   urlParams.get('order_id') || 
+                   urlParams.get('razorpay_orderId');
+    
+    const signature = urlParams.get('razorpay_signature') || urlParams.get('signature');
+    const status = urlParams.get('razorpay_payment_status') || 
+                  urlParams.get('status') || 
+                  urlParams.get('payment_status');
+    
+    console.log('🔍 Payment Check:', { paymentId, orderId, status });
+    
+    // ✅ If paymentId exists, payment was successful
+    if (paymentId && paymentId.startsWith('pay_')) {
         paymentData = {
             razorpay_payment_id: paymentId,
             razorpay_order_id: orderId || 'ORDER_' + Date.now(),
@@ -73,35 +84,56 @@ function checkPaymentReturn() {
         
         console.log('✅ Payment Captured:', paymentData);
         
+        // Save to session storage
         sessionStorage.setItem('auditPayment', JSON.stringify(paymentData));
+        
+        // Restore form data
         restoreFormData();
         
+        // ✅ Update UI - THIS IS THE KEY FIX
         paymentDone = true;
-        paymentStatus.innerHTML = '✅ Payment Successful!<br><small>ID: ' + paymentId.substring(0, 15) + '...</small>';
+        paymentStatus.innerHTML = '✅ Payment Successful!<br><small>ID: ' + paymentId + '</small>';
+        paymentStatus.className = 'payment-status success';
+        payBtn.disabled = true;
+        payBtn.style.opacity = '0.6';
+        completeBtn.disabled = false;  // ✅ ENABLE BUTTON
+        
+        showToast('Payment successful! Click "Complete Registration"', 'success');
+        
+        // Clean URL
+        window.history.replaceState({}, document.title, CONFIG.RETURN_URL);
+        
+        return true;
+    }
+    
+    // ✅ Also check if status explicitly says success
+    if (status && (status.toLowerCase() === 'success' || status.toLowerCase() === 'captured' || status.toLowerCase() === 'paid')) {
+        console.log('✅ Status-based payment detection');
+        paymentData.payment_status = 'captured';
+        paymentDone = true;
+        paymentStatus.innerHTML = '✅ Payment Successful!';
         paymentStatus.className = 'payment-status success';
         payBtn.disabled = true;
         payBtn.style.opacity = '0.6';
         completeBtn.disabled = false;
-        
-        showToast('Payment successful! Click "Complete Registration"', 'success');
-        window.history.replaceState({}, document.title, CONFIG.RETURN_URL);
-        
+        showToast('Payment successful! Complete registration', 'success');
         return true;
     }
     
     return false;
 }
 
+// Check session storage (page refresh scenario)
 function checkSessionPayment() {
     const savedPayment = sessionStorage.getItem('auditPayment');
     if (savedPayment) {
         try {
             const parsed = JSON.parse(savedPayment);
-            if (parsed.razorpay_payment_id) {
+            if (parsed.razorpay_payment_id && parsed.razorpay_payment_id.startsWith('pay_')) {
                 paymentData = parsed;
                 paymentDone = true;
                 
-                paymentStatus.innerHTML = '✅ Payment Successful!<br><small>ID: ' + parsed.razorpay_payment_id.substring(0, 15) + '...</small>';
+                paymentStatus.innerHTML = '✅ Payment Successful!<br><small>ID: ' + parsed.razorpay_payment_id + '</small>';
                 paymentStatus.className = 'payment-status success';
                 payBtn.disabled = true;
                 payBtn.style.opacity = '0.6';
@@ -117,6 +149,7 @@ function checkSessionPayment() {
     return false;
 }
 
+// Restore form fields from session
 function restoreFormData() {
     const savedData = sessionStorage.getItem('auditFormData');
     if (savedData) {
@@ -126,13 +159,14 @@ function restoreFormData() {
                 const field = document.getElementById(id);
                 if (field && data[id]) field.value = data[id];
             });
-            console.log('🔄 Form data restored from session');
+            console.log('🔄 Form data restored');
         } catch (e) {
             console.error('Restore error', e);
         }
     }
 }
 
+// Save form data before payment redirect
 function saveFormData() {
     const formData = {
         name: document.getElementById('name').value,
@@ -145,7 +179,7 @@ function saveFormData() {
         remarks: document.getElementById('remarks').value
     };
     sessionStorage.setItem('auditFormData', JSON.stringify(formData));
-    console.log('💾 Form data saved to session');
+    console.log('💾 Form data saved');
 }
 
 // ============================================================================
@@ -217,7 +251,7 @@ function validateFormForSubmit() {
 }
 
 // ============================================================================
-// DATA COLLECTION & SUBMISSION TO GOOGLE SHEETS
+// DATA COLLECTION & SUBMISSION
 // ============================================================================
 
 function collectFormData() {
@@ -248,13 +282,13 @@ async function submitToGoogleSheets(data) {
     console.log('📤 Sending to Google Sheets:', data);
     
     try {
-        await fetch(CONFIG.GOOGLE_SCRIPT, {
+        await fetch(CONFIG.GOOGLE_SCRIPT.trim(), {
             method: 'POST',
             mode: 'no-cors',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-        console.log('✅ Data sent successfully to Google Sheets');
+        console.log('✅ Data sent successfully');
         return true;
     } catch (error) {
         console.error('❌ Submission error:', error);
@@ -281,11 +315,12 @@ payBtn.addEventListener('click', (e) => {
     
     saveFormData();
     
-    const paymentUrl = new URL(CONFIG.PAYMENT_LINK);
+    // ✅ Add return URLs to payment link (CRITICAL FOR REDIRECT)
+    const paymentUrl = new URL(CONFIG.PAYMENT_LINK.trim());
     paymentUrl.searchParams.set('redirect_url', CONFIG.RETURN_URL);
     paymentUrl.searchParams.set('return_url', CONFIG.RETURN_URL);
     
-    console.log('🔗 Redirecting to Razorpay:', paymentUrl.toString());
+    console.log('🔗 Redirecting to:', paymentUrl.toString());
     window.location.href = paymentUrl.toString();
 });
 
@@ -327,7 +362,7 @@ async function handleSubmit(e) {
         showToast('Registration completed successfully!', 'success');
         
     } catch (error) {
-        console.error('Error during submission:', error);
+        console.error('Error:', error);
         showToast('Registration saved locally', 'warning');
         
         document.getElementById('receiptName').textContent = document.getElementById('name').value;
@@ -350,14 +385,19 @@ async function handleSubmit(e) {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 Audit form initialized');
     console.log('🔧 Config:', {
-        PAYMENT_LINK: CONFIG.PAYMENT_LINK,
-        GOOGLE_SCRIPT: CONFIG.GOOGLE_SCRIPT,
+        PAYMENT_LINK: CONFIG.PAYMENT_LINK.trim(),
+        GOOGLE_SCRIPT: CONFIG.GOOGLE_SCRIPT.trim(),
         RETURN_URL: CONFIG.RETURN_URL
     });
     
+    // ✅ Check payment return FIRST (most important)
     const paymentHandled = checkPaymentReturn();
-    if (!paymentHandled) checkSessionPayment();
     
+    if (!paymentHandled) {
+        checkSessionPayment();
+    }
+    
+    // Live validation
     ['name', 'designation', 'company', 'employees', 'phone', 'email', 'city'].forEach(id => {
         const field = document.getElementById(id);
         if (field) {
@@ -366,6 +406,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
+    // Star rating
     document.querySelectorAll('.star-rating label').forEach(label => {
         label.setAttribute('tabindex', '0');
         label.addEventListener('keydown', (e) => {
