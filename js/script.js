@@ -4,10 +4,10 @@
  */
 
 const CONFIG = {
-    PAYMENT_LINK: "https://rzp.io/rzp/5NCrTAI",
+    PAYMENT_LINK: "https://rzp.io/rzp/5NCrTAI",  // ✅ कोई space नहीं
     AMOUNT: 1,
     CURRENCY: "INR",
-    GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbxaUqg1BoYgstjnBgZ05ikfm0WORRIqeX-Nf35N-e-PNTYof3BjVBuPaQoMxtu2TXTN2g/exec",
+    GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbxaUqg1BoYgstjnBgZ05ikfm0WORRIqeX-Nf35N-e-PNTYof3BjVBuPaQoMxtu2TXTN2g/exec",  // ✅ कोई space नहीं
     RETURN_URL: window.location.href.split('?')[0],
     DEBUG: true
 };
