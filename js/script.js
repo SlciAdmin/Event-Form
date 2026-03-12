@@ -1,14 +1,14 @@
 /**
- * ✅ FINAL: Event Registration System - MOBILE OPTIMIZED
- * Auto-submit after Razorpay payment + Google Sheets save working
+ * ✅ FINAL: Event Registration System - PAYMENT LINK VERSION
+ * Razorpay Payment Link + Google Sheets Integration
  */
 
 const CONFIG = {
-    PAYMENT_LINK: "https://rzp.io/rzp/5NCrTAI",  // ✅ कोई space नहीं
+    PAYMENT_LINK: "https://rzp.io/rzp/5NCrTAI",  // ✅ NO SPACES
     AMOUNT: 1,
     CURRENCY: "INR",
-    GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbzdzpzP-bxaKy904nz5LUXLGtIy4-kTL-cQ4cKxtaBIT1y9xCTMPtLBHrUvQ3MzBTDkEw/exec",  // ✅ कोई space नहीं
-    RETURN_URL: window.location.href.split('?')[0],
+    GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbzdzpzP-bxaKy904nz5LUXLGtIy4-kTL-cQ4cKxtaBIT1y9xCTMPtLBHrUvQ3MzBTDkEw/exec",  // ✅ NO SPACES
+    RETURN_URL: window.location.origin + window.location.pathname,
     DEBUG: true
 };
 
@@ -38,7 +38,6 @@ function debug(msg, data = null) {
 function showView(viewName) {
     currentView = viewName;
     
-    // Hide all views first
     $('landingPage')?.classList.add('hidden');
     $('landingPage')?.classList.remove('active-form');
     $('feedbackForm')?.classList.add('hidden-form');
@@ -48,7 +47,6 @@ function showView(viewName) {
     $('successMsg')?.classList.add('hidden');
     $('successMsg')?.classList.remove('active-form');
     
-    // Show requested view
     switch(viewName) {
         case 'landing':
             $('landingPage')?.classList.remove('hidden');
@@ -74,103 +72,115 @@ function backToLanding() {
     showView('landing');
 }
 
-// 🔥 CRITICAL: Enhanced Payment Return Handler for Mobile
+// 🔥 CRITICAL: Payment Return Handler
 function handlePaymentReturn() {
     debug('🔍 Checking payment return...');
     
-    // Method 1: Check URL Parameters
     const urlParams = new URLSearchParams(window.location.search);
-    const paymentId = urlParams.get('razorpay_payment_id');
-    const status = urlParams.get('razorpay_payment_status');
-    const orderId = urlParams.get('razorpay_order_id');
-    const error = urlParams.get('razorpay_error');
     
-    // Method 2: Check sessionStorage (mobile fallback)
+    // Razorpay Payment Link parameters
+    const paymentId = urlParams.get('razorpay_payment_id') || 
+                     urlParams.get('payment_id');
+    const status = urlParams.get('razorpay_payment_status') || 
+                  urlParams.get('payment_status') ||
+                  urlParams.get('status');
+    const orderId = urlParams.get('razorpay_order_id') || 
+                   urlParams.get('order_id');
+    const error = urlParams.get('razorpay_error') || 
+                 urlParams.get('error');
+    
+    // SessionStorage fallback
     const savedPaymentData = sessionStorage.getItem('paymentData');
-    const savedFormData = sessionStorage.getItem('tempPaidData');
     
-    debug('URL Params:', { paymentId, status, orderId, error });
-    debug('Session Payment Data:', savedPaymentData);
-    debug('Session Form Data:', savedFormData);
+    debug('📋 URL Params:', { paymentId, status, orderId, error });
+    debug('💾 Session Data:', savedPaymentData ? 'Exists' : 'None');
     
     // ✅ CHECK 1: Payment Successful via URL
-    if (paymentId && (status === 'captured' || status === 'success')) {
+    if (paymentId && (status === 'captured' || status === 'success' || status === 'paid')) {
         debug('✅ Payment captured via URL!', { paymentId, orderId });
-        processSuccessfulPayment(paymentId, orderId || 'N/A');
+        showToast('✅ Payment Successful! Processing...', 'success');
+        processSuccessfulPayment(paymentId, orderId || 'ORDER_' + Date.now());
         cleanURL();
         return true;
     }
     
-    // ✅ CHECK 2: Payment data in sessionStorage
-    if (savedPaymentData && currentView === 'paid') {
+    // ✅ CHECK 2: SessionStorage से restore
+    if (savedPaymentData && !paymentDone) {
         try {
             const parsedData = JSON.parse(savedPaymentData);
             if (parsedData.razorpay_payment_id && 
-                (parsedData.payment_status === 'captured' || parsedData.payment_status === 'success')) {
-                debug('✅ Payment captured via SessionStorage!', parsedData);
-                processSuccessfulPayment(parsedData.razorpay_payment_id, parsedData.razorpay_order_id || 'N/A');
+                (parsedData.payment_status === 'captured' || 
+                 parsedData.payment_status === 'success')) {
+                debug('✅ Payment restored from SessionStorage!');
+                showToast('✅ Payment Verified! Completing registration...', 'success');
+                processSuccessfulPayment(
+                    parsedData.razorpay_payment_id, 
+                    parsedData.razorpay_order_id || 'ORDER_' + Date.now()
+                );
                 return true;
             }
         } catch (e) {
-            debug('⚠️ Failed to parse session payment data', e);
+            debug('⚠️ Parse error', e);
         }
     }
     
-    // ❌ Payment Failed/Cancelled
-    if (error || (status && status !== 'captured' && status !== 'success')) {
-        debug('❌ Payment failed/cancelled', { error, status });
-        showToast(`⚠️ Payment ${error ? 'Failed' : 'Cancelled'}. Please try again.`, 'warning');
+    // ❌ Payment Failed
+    if (error || (status && !['captured', 'success', 'paid'].includes(status))) {
+        debug('❌ Payment failed', { error, status });
+        showToast(`⚠️ Payment ${error ? 'Failed' : 'Cancelled'}. Try again.`, 'warning');
         resetPaymentUI();
         cleanURL();
         return false;
     }
     
-    debug('ℹ️ No payment parameters found');
+    debug('ℹ️ No payment params found');
     return false;
 }
 
-// 🔥 Process Successful Payment & Auto-Submit
+// 🔥 Process Payment & Show Form
 function processSuccessfulPayment(paymentId, orderId) {
     paymentDone = true;
-    paymentData.razorpay_payment_id = paymentId;
-    paymentData.razorpay_order_id = orderId;
-    paymentData.razorpay_signature = "AUTO_CAPTURED";
-    paymentData.payment_status = "captured";
+    paymentData = {
+        razorpay_payment_id: paymentId,
+        razorpay_order_id: orderId,
+        razorpay_signature: "AUTO_CAPTURED",
+        payment_status: "captured",
+        payment_link_id: "IRE79PZ"
+    };
     
     // Save to sessionStorage
     try {
         sessionStorage.setItem('paymentData', JSON.stringify(paymentData));
-        debug('💾 Payment data saved to session');
+        debug('💾 Payment data saved');
     } catch (e) {
-        debug('⚠️ Session storage failed', e);
+        debug('⚠️ Session save failed', e);
     }
     
-    // Update UI immediately
+    // Update UI
     updatePaymentUI(true);
     
+    // Enable submit button
     const submitBtn = $('submitBtn');
     if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i class="fas fa-check"></i> Complete Registration';
+        submitBtn.classList.add('pulse-animation');
     }
     
-    // Restore form data if exists
+    // Restore form data
     restoreFormData();
     
-    // 🔥 CRITICAL: Auto-submit after payment (mobile optimized)
-    setTimeout(() => {
-        if (validatePaidForm()) {
-            debug('🔄 Auto-submitting paid form after payment...');
-            handlePaidSubmit(null, true);
-        } else {
-            debug('⚠️ Form validation failed, showing form to user');
-            showToast('✅ Payment Successful! Please review and submit.', 'success');
-            showView('paid');
-        }
-    }, 1000);
+    // Show paid form if not already visible
+    if (currentView !== 'paid') {
+        debug('📋 Showing paid form...');
+        showView('paid');
+        showToast('✅ Payment Successful! Click "Complete Registration"', 'success');
+    } else {
+        showToast('✅ Payment Successful! Click "Complete Registration"', 'success');
+    }
 }
 
-// Restore Form Data from Session
+// Restore Form Data
 function restoreFormData() {
     const savedFormData = sessionStorage.getItem('tempPaidData');
     if (savedFormData) {
@@ -184,22 +194,20 @@ function restoreFormData() {
                 }
             });
             
-            // Restore rating
             if (formData.audit_rating) {
                 const ratingRadio = document.querySelector(`input[name="audit_rating"][value="${formData.audit_rating}"]`);
                 if (ratingRadio) {
                     ratingRadio.checked = true;
-                    debug('⭐ Rating restored:', formData.audit_rating);
                 }
             }
-            debug('🔄 Form data restored successfully');
+            debug('🔄 Form data restored');
         } catch (e) {
-            debug('⚠️ Failed to restore form data', e);
+            debug('⚠️ Restore failed', e);
         }
     }
 }
 
-// Clean URL Parameters
+// Clean URL
 function cleanURL() {
     if (window.history.replaceState) {
         const cleanUrl = window.location.pathname;
@@ -210,29 +218,25 @@ function cleanURL() {
 
 // DOM Ready
 document.addEventListener('DOMContentLoaded', () => {
-    debug('🚀 DOM Content Loaded');
+    debug('🚀 DOM Loaded');
     showView('landing');
     
-    // Button Event Listeners
     $('showFeedbackBtn')?.addEventListener('click', (e) => {
         e.preventDefault();
-        debug('🖱️ Feedback button clicked');
         showView('feedback');
         initFeedbackForm();
     });
     
     $('showPaidBtn')?.addEventListener('click', (e) => {
         e.preventDefault();
-        debug('🖱️ Audit button clicked');
         showView('paid');
         initPaidForm();
     });
     
-    // Initialize forms
     initFeedbackForm();
     initPaidForm();
     
-    // ✅ CRITICAL: Check payment return AFTER everything is loaded
+    // Check payment return
     setTimeout(() => {
         handlePaymentReturn();
     }, 500);
@@ -267,11 +271,9 @@ function initFeedbackForm() {
             handleFeedbackSubmit();
         }
     });
-    
-    debug('✅ Feedback Form initialized');
 }
 
-// Initialize Paid/Audit Form
+// Initialize Paid Form
 function initPaidForm() {
     const form = $('paidForm');
     if (!form) return;
@@ -279,7 +281,7 @@ function initPaidForm() {
     const newForm = form.cloneNode(true);
     form.parentNode.replaceChild(newForm, form);
     
-    // Check for saved payment state
+    // Check saved payment
     const savedPayment = sessionStorage.getItem('paymentData');
     if (savedPayment) {
         try {
@@ -292,20 +294,19 @@ function initPaidForm() {
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = '<i class="fas fa-check"></i> Complete Registration';
                 }
-                debug('🔄 Payment state restored from session');
             }
         } catch (e) {
-            debug('⚠️ Failed to parse payment data', e);
+            debug('⚠️ Parse failed', e);
         }
     }
     
-    // Payment Button Handler
+    // Payment button handler
     const payBtn = $('payBtn');
     if (payBtn) {
         payBtn.addEventListener('click', (e) => {
             if (!validatePaidForm()) {
                 e.preventDefault();
-                showToast('Please fill all required fields before payment', 'error');
+                showToast('Please fill all required fields first', 'error');
                 return false;
             }
             
@@ -313,9 +314,9 @@ function initPaidForm() {
             try {
                 const formData = collectPaidFormData();
                 sessionStorage.setItem('tempPaidData', JSON.stringify(formData));
-                debug('💾 Form data saved to session before payment');
+                debug('💾 Form data saved before payment');
             } catch (err) {
-                debug('⚠️ Failed to save temp data', err);
+                debug('⚠️ Save failed', err);
             }
             
             debug('🔗 Redirecting to Razorpay...');
@@ -323,7 +324,7 @@ function initPaidForm() {
         });
     }
     
-    // Form Submit Handler
+    // Form submit handler
     newForm.addEventListener('submit', (e) => {
         e.preventDefault();
         if (!isSubmitting && paymentDone) {
@@ -333,7 +334,7 @@ function initPaidForm() {
         }
     });
     
-    // Field Validation
+    // Field validation
     ['name', 'email', 'phone', 'city', 'employees', 'designation', 'company'].forEach(id => {
         const field = $(id);
         if (field) {
@@ -348,7 +349,6 @@ function initPaidForm() {
     });
     
     initStarRating('audit_starRating');
-    debug('✅ Paid Form initialized');
 }
 
 // Validate single field
@@ -366,7 +366,7 @@ function validateField(field, formType) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(value)) {
             markInvalid(field);
-            showToast('Please enter a valid email address', 'error');
+            showToast('Please enter valid email', 'error');
             isValid = false;
         }
     }
@@ -375,7 +375,7 @@ function validateField(field, formType) {
         const phoneRegex = /^[6-9][0-9]{9}$/;
         if (!phoneRegex.test(value)) {
             markInvalid(field);
-            showToast('Please enter a valid 10-digit mobile number', 'error');
+            showToast('Please enter valid 10-digit number', 'error');
             isValid = false;
         }
     }
@@ -383,7 +383,7 @@ function validateField(field, formType) {
     if (field.type === 'number' && value) {
         if (isNaN(value) || value < 1) {
             markInvalid(field);
-            showToast('Please enter a valid number', 'error');
+            showToast('Please enter valid number', 'error');
             isValid = false;
         }
     }
@@ -410,7 +410,7 @@ function validateFeedbackForm() {
     
     const rating = document.querySelector('input[name="fb_rating"]:checked');
     if (!rating) {
-        showToast('Please select a session rating', 'error');
+        showToast('Please select a rating', 'error');
         const ratingContainer = $('fb_starRating');
         if (ratingContainer) ratingContainer.style.borderColor = 'var(--danger)';
         isValid = false;
@@ -422,7 +422,7 @@ function validateFeedbackForm() {
     return isValid;
 }
 
-// Validate Paid/Audit Form
+// Validate Paid Form
 function validatePaidForm() {
     let isValid = true;
     const requiredFields = ['name', 'designation', 'company', 'phone', 'email', 'city', 'employees'];
@@ -436,7 +436,7 @@ function validatePaidForm() {
     
     const auditRating = document.querySelector('input[name="audit_rating"]:checked');
     if (!auditRating) {
-        showToast('Please select an experience rating', 'error');
+        showToast('Please select a rating', 'error');
         const ratingContainer = $('audit_starRating');
         if (ratingContainer) ratingContainer.style.borderColor = 'var(--danger)';
         isValid = false;
@@ -448,7 +448,7 @@ function validatePaidForm() {
     return isValid;
 }
 
-// Mark field invalid with animation
+// Mark field invalid
 function markInvalid(field) {
     if (!field) return;
     field.style.borderColor = 'var(--danger)';
@@ -461,17 +461,12 @@ function markInvalid(field) {
 
 // Handle Feedback Submission
 async function handleFeedbackSubmit() {
-    debug('📤 Feedback submission triggered');
+    debug('📤 Feedback submit triggered');
     
-    if (isSubmitting) {
-        debug('⚠️ Already submitting - ignoring');
-        return;
-    }
+    if (isSubmitting) return;
     
     if (!validateFeedbackForm()) {
-        showToast('Please fill all required fields correctly', 'error');
-        const firstInvalid = document.querySelector('#feedbackForm [aria-invalid="true"]');
-        if (firstInvalid) firstInvalid.focus();
+        showToast('Please fill all required fields', 'error');
         return;
     }
     
@@ -480,7 +475,7 @@ async function handleFeedbackSubmit() {
     
     try {
         const data = collectFeedbackData();
-        debug('📦 Feedback data collected', data);
+        debug('📦 Data collected', data);
         
         await submitToGoogleSheets(data, 'feedback');
         showSuccess(data, 'feedback');
@@ -537,44 +532,39 @@ function resetFeedbackForm() {
     
     const ratingContainer = $('fb_starRating');
     if (ratingContainer) ratingContainer.style.borderColor = '';
-    
-    debug('✅ Feedback form reset');
 }
 
-// Handle Paid/Audit Submission
+// Handle Paid Submission
 async function handlePaidSubmit(e = null, autoSubmit = false) {
     if (e) e.preventDefault();
-    debug('📤 Paid submission triggered', { autoSubmit });
+    debug('📤 Paid submit triggered', { autoSubmit });
     
-    if (isSubmitting) {
-        debug('⚠️ Already submitting - ignoring');
-        return;
-    }
+    if (isSubmitting) return;
     
     if (!paymentDone) {
-        debug('❌ Payment not completed');
-        showToast('⚠️ Please complete the payment first', 'error');
+        debug('❌ Payment not done');
+        showToast('⚠️ Please complete payment first', 'error');
         $('payBtn')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
     }
     
     if (!validatePaidForm()) {
-        showToast('Please fill all required fields correctly', 'error');
+        showToast('Please fill all required fields', 'error');
         const firstInvalid = document.querySelector('#paidForm [aria-invalid="true"]');
         if (firstInvalid) firstInvalid.focus();
         return;
     }
     
-    // Restore payment data if needed
+    // Restore payment data
     if (!paymentData.razorpay_payment_id) {
         try {
             const saved = sessionStorage.getItem('paymentData');
             if (saved) {
                 paymentData = JSON.parse(saved);
-                debug('🔄 Payment data restored from session');
+                debug('🔄 Payment data restored');
             }
         } catch (err) {
-            debug('⚠️ Failed to restore payment data', err);
+            debug('⚠️ Restore failed', err);
         }
     }
     
@@ -586,22 +576,22 @@ async function handlePaidSubmit(e = null, autoSubmit = false) {
     }
     
     isSubmitting = true;
-    showLoader(autoSubmit ? 'Processing Payment...' : 'Processing Registration...');
+    showLoader(autoSubmit ? 'Processing...' : 'Completing Registration...');
     
     try {
         const data = collectPaidFormData();
-        debug('📦 Paid data collected', data);
+        debug('📦 Data collected', data);
         
         await submitToGoogleSheets(data, 'audit');
         showSuccess(data, 'paid');
         
-        // Clear session after successful submission
+        // Clear session
         sessionStorage.removeItem('paymentData');
         sessionStorage.removeItem('tempPaidData');
-        debug('🧹 Session data cleared');
+        debug('🧹 Session cleared');
         
     } catch (error) {
-        console.error('Paid submission error:', error);
+        console.error('Paid error:', error);
         showToast('⚠️ Registration saved locally', 'warning');
         showSuccess(collectPaidFormData(), 'paid');
     } finally {
@@ -610,7 +600,7 @@ async function handlePaidSubmit(e = null, autoSubmit = false) {
     }
 }
 
-// Collect Paid/Audit Data
+// Collect Paid Data
 function collectPaidFormData() {
     const auditRating = document.querySelector('input[name="audit_rating"]:checked')?.value || 'Not rated';
     return {
@@ -669,20 +659,18 @@ function resetPaidForm() {
         sessionStorage.removeItem('paymentData');
         sessionStorage.removeItem('tempPaidData');
     } catch (e) {
-        debug('⚠️ Session cleanup failed', e);
+        debug('⚠️ Cleanup failed', e);
     }
-    
-    debug('✅ Paid form reset');
 }
 
-// Submit to Google Sheets via Apps Script
+// Submit to Google Sheets
 async function submitToGoogleSheets(data, formType) {
     if (!CONFIG.GOOGLE_SCRIPT || CONFIG.GOOGLE_SCRIPT.includes('YOUR_')) {
-        debug('📋 Demo mode: Google Script not configured');
+        debug('📋 Demo mode');
         return true;
     }
     
-    debug(`📤 Sending ${formType} data to Google Sheets...`);
+    debug(`📤 Sending ${formType} data...`);
     
     try {
         const scriptURL = `${CONFIG.GOOGLE_SCRIPT}?t=${Date.now()}`;
@@ -696,28 +684,27 @@ async function submitToGoogleSheets(data, formType) {
             body: JSON.stringify(data)
         });
         
-        debug(`✅ ${formType} data sent successfully (type: ${response.type})`);
+        debug(`✅ ${formType} sent (type: ${response.type})`);
         
-        // Backup with beacon API
         if (navigator.sendBeacon) {
             navigator.sendBeacon(scriptURL, JSON.stringify(data));
-            debug('📡 Backup beacon sent');
+            debug('📡 Beacon sent');
         }
         
         return true;
         
     } catch (error) {
-        console.error(`Google Sheets error (${formType}):`, error);
+        console.error(`${formType} error:`, error);
         debug(`❌ Error:`, error);
         
-        // Save to localStorage as last resort
+        // Backup
         try {
             const backups = JSON.parse(localStorage.getItem('formBackups') || '[]');
             backups.push({ data, formType, timestamp: new Date().toISOString() });
             localStorage.setItem('formBackups', JSON.stringify(backups));
-            debug('💾 Data saved to localStorage backup');
+            debug('💾 Backup saved');
         } catch (e) {
-            debug('⚠️ Backup save failed', e);
+            debug('⚠️ Backup failed', e);
         }
         
         throw error;
@@ -726,7 +713,6 @@ async function submitToGoogleSheets(data, formType) {
 
 // Show Success Screen
 function showSuccess(data, formType) {
-    // Hide Both Forms Immediately
     $('feedbackForm')?.classList.add('hidden-form');
     $('paidForm')?.classList.add('hidden-form');
     $('landingPage')?.classList.add('hidden');
@@ -734,10 +720,8 @@ function showSuccess(data, formType) {
     const successMsg = $('successMsg');
     if (!successMsg) return;
     
-    // Show Success Container
     successMsg.classList.remove('hidden');
     
-    // FEEDBACK - Minimal Message
     if (formType === 'feedback') {
         successMsg.innerHTML = `
             <div class="success-icon" style="font-size:4rem; color:var(--success); margin-bottom:15px">
@@ -745,16 +729,13 @@ function showSuccess(data, formType) {
             </div>
             <h2 id="successTitle" style="margin:10px 0; color:var(--text)">✅ Feedback Submitted!</h2>
             <p style="color:var(--muted); margin:15px 0; font-size:1.1rem">
-                Thank you for sharing your valuable feedback! 🙏
+                Thank you for your feedback! 🙏
             </p>
             <button type="button" onclick="resetAll()" class="btn-primary" style="margin-top:25px; max-width: 250px;">
                 <i class="fas fa-home"></i> Back to Home
             </button>
         `;
-        debug('🎉 Minimal success screen for feedback');
-    }
-    // PAID/AUDIT - Full Receipt
-    else {
+    } else {
         const mappings = {
             sName: data.name,
             sEmail: data.email,
@@ -789,15 +770,13 @@ function showSuccess(data, formType) {
         
         const printBtn = successMsg.querySelector('.btn-outline');
         if (printBtn) printBtn.style.display = 'inline-flex';
-        
-        debug('🎉 Full success screen for paid registration');
     }
     
     currentView = 'success';
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Update Payment UI State
+// Update Payment UI
 function updatePaymentUI(paid) {
     const paymentStatus = $('paymentStatus');
     const payBtn = $('payBtn');
@@ -818,10 +797,7 @@ function updatePaymentUI(paid) {
             submitBtn.disabled = false;
             submitBtn.innerHTML = '<i class="fas fa-check"></i> Complete Registration';
             submitBtn.focus();
-            debug('✅ Submit button enabled after payment');
         }
-        
-        debug('🎨 Payment UI: Paid state');
     }
 }
 
@@ -845,8 +821,6 @@ function resetPaymentUI() {
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-lock"></i> Complete Registration';
     }
-    
-    debug('🎨 Payment UI: Pending state');
 }
 
 // Initialize Star Rating
@@ -866,7 +840,6 @@ function initStarRating(containerId) {
                 });
                 input.checked = true;
                 container.style.borderColor = '';
-                debug(`⭐ Rating selected: ${input.value}`);
             }
         });
         
@@ -891,7 +864,6 @@ function showLoader(text = 'Processing...') {
     }
     if (loaderText) loaderText.textContent = text;
     document.body.style.overflow = 'hidden';
-    debug(`🔄 Loader shown: ${text}`);
 }
 
 // Hide Loader
@@ -902,10 +874,9 @@ function hideLoader() {
         loader.setAttribute('aria-hidden', 'true');
     }
     document.body.style.overflow = '';
-    debug('🔄 Loader hidden');
 }
 
-// Show Toast Notification
+// Show Toast
 function showToast(message, type = 'info') {
     const toast = $('toast');
     if (!toast) return;
@@ -930,13 +901,11 @@ function showToast(message, type = 'info') {
         toast.classList.add('hidden');
         delete toast._timeoutId;
     }, 3500);
-    
-    debug(`🔔 Toast: [${type}] ${message}`);
 }
 
 // Global Reset
 function resetAll() {
-    debug('🔄 Global reset triggered');
+    debug('🔄 Global reset');
     $('successMsg')?.classList.add('hidden');
     resetFeedbackForm();
     resetPaidForm();
@@ -946,26 +915,24 @@ function resetAll() {
     if (window.history.replaceState) {
         window.history.replaceState({}, document.title, CONFIG.RETURN_URL);
     }
-    
-    debug('✅ Global reset complete');
 }
 
-// Handle Browser Back Button
+// Back button
 window.addEventListener('popstate', () => {
     if (!paymentDone && !window.location.search.includes('razorpay_')) {
-        debug('⬅️ Back navigation - resetting');
+        debug('⬅️ Back - resetting');
         resetAll();
     }
 });
 
-// Clean temp data on page unload
+// Clean on unload
 window.addEventListener('beforeunload', () => {
     try {
         sessionStorage.removeItem('tempPaidData');
     } catch (e) {}
 });
 
-// Mobile keyboard fix
+// Mobile keyboard
 document.addEventListener('focusin', (e) => {
     if (e.target.tagName === 'INPUT' && window.innerWidth < 500) {
         const meta = document.querySelector('meta[name="viewport"]');
@@ -975,7 +942,7 @@ document.addEventListener('focusin', (e) => {
     }
 });
 
-// Enter key navigation
+// Enter key
 $$('input[type="text"], input[type="email"], input[type="tel"], input[type="number"], textarea').forEach(field => {
     field.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
@@ -990,7 +957,7 @@ $$('input[type="text"], input[type="email"], input[type="tel"], input[type="numb
     });
 });
 
-// Add shake animation CSS
+// Add CSS
 const style = document.createElement('style');
 style.textContent = `
     @keyframes shake {
@@ -998,7 +965,14 @@ style.textContent = `
         25% { transform: translateX(-5px); }
         75% { transform: translateX(5px); }
     }
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+    .pulse-animation {
+        animation: pulse 2s ease-in-out infinite;
+    }
 `;
 document.head.appendChild(style);
 
-debug('🎯 Event Registration System Ready - Mobile Optimized');
+debug('🎯 System Ready');
