@@ -1,15 +1,14 @@
 /**
  * ✅ FINAL: Event Registration System - MOBILE OPTIMIZED
  * Auto-submit after Razorpay payment + Google Sheets save working
- * Google Script: AKfycbxfd7cLW65qi7OQ4mwK65ztrhoAp1_m3t2rVpTAQfr-DZuuLilrhsHQCJFAhTpmVe2zSA
  */
 
 const CONFIG = {
     PAYMENT_LINK: "https://rzp.io/rzp/5NCrTAI",
     AMOUNT: 1,
     CURRENCY: "INR",
-    GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbxfd7cLW65qi7OQ4mwK65ztrhoAp1_m3t2rVpTAQfr-DZuuLilrhsHQCJFAhTpmVe2zSA/exec",
-    RETURN_URL: window.location.origin + window.location.pathname,
+    GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbxaUqg1BoYgstjnBgZ05ikfm0WORRIqeX-Nf35N-e-PNTYof3BjVBuPaQoMxtu2TXTN2g/exec",
+    RETURN_URL: window.location.href.split('?')[0],
     DEBUG: true
 };
 
@@ -686,7 +685,9 @@ async function submitToGoogleSheets(data, formType) {
     debug(`📤 Sending ${formType} data to Google Sheets...`);
     
     try {
-        const response = await fetch(CONFIG.GOOGLE_SCRIPT, {
+        const scriptURL = `${CONFIG.GOOGLE_SCRIPT}?t=${Date.now()}`;
+        
+        const response = await fetch(scriptURL, {
             method: 'POST',
             mode: 'no-cors',
             headers: { 
@@ -695,12 +696,30 @@ async function submitToGoogleSheets(data, formType) {
             body: JSON.stringify(data)
         });
         
-        debug(`✅ ${formType} data sent successfully`);
+        debug(`✅ ${formType} data sent successfully (type: ${response.type})`);
+        
+        // Backup with beacon API
+        if (navigator.sendBeacon) {
+            navigator.sendBeacon(scriptURL, JSON.stringify(data));
+            debug('📡 Backup beacon sent');
+        }
+        
         return true;
         
     } catch (error) {
         console.error(`Google Sheets error (${formType}):`, error);
         debug(`❌ Error:`, error);
+        
+        // Save to localStorage as last resort
+        try {
+            const backups = JSON.parse(localStorage.getItem('formBackups') || '[]');
+            backups.push({ data, formType, timestamp: new Date().toISOString() });
+            localStorage.setItem('formBackups', JSON.stringify(backups));
+            debug('💾 Data saved to localStorage backup');
+        } catch (e) {
+            debug('⚠️ Backup save failed', e);
+        }
+        
         throw error;
     }
 }
