@@ -657,47 +657,28 @@ function resetPaidForm() {
 }
 
 async function submitToGoogleSheets(data, formType) {
+    if (!CONFIG.GOOGLE_SCRIPT || CONFIG.GOOGLE_SCRIPT.includes('YOUR_')) {
+        debug('📋 Demo mode: Google Script not configured');
+        return true;
+    }
+
+    debug(`📤 Sending ${formType} data to Google Sheets...`);
 
     try {
-
-        const blob = new Blob(
-            [JSON.stringify(data)],
-            { type: 'application/json' }
-        );
-
-        navigator.sendBeacon(CONFIG.GOOGLE_SCRIPT, blob);
-
-        debug(`📤 ${formType} data sent using Beacon`);
-
-        return true;
-
-    } catch (error) {
-
-        console.error("Beacon error:", error);
-
-        // fallback fetch
-        await fetch(CONFIG.GOOGLE_SCRIPT, {
+        const response = await fetch(CONFIG.GOOGLE_SCRIPT, {
             method: 'POST',
+            mode: 'no-cors',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
 
+        debug(`✅ ${formType} data sent successfully`);
         return true;
+    } catch (error) {
+        console.error(`Google Sheets error (${formType}):`, error);
+        debug(`❌ Error:`, error);
+        throw error;
     }
-}
-
-const started = sessionStorage.getItem("tempPaidData");
-
-if (!paymentId && started) {
-
-    debug("⚡ Payment assumed successful (mobile return)");
-
-    processSuccessfulPayment(
-        "MOBILE_PAYMENT",
-        "N/A"
-    );
-
-    return true;
 }
 
 function showSuccess(data, formType) {
