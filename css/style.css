@@ -1166,3 +1166,13 @@ margin: 0;
     justify-content: center;
   }
 }
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.submitting {
+    pointer-events: none !important;
+    opacity: 0.7 !important;
+}

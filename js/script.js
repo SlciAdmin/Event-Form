@@ -121,6 +121,12 @@ function handlePaymentReturn() {
 
 // 🔥 Process Payment & AUTO SUBMIT
 function processSuccessfulPayment(paymentId, orderId) {
+    // ✅ Prevent duplicate processing
+    if (paymentDone) {
+        debug('⚠️ Payment already processed');
+        return;
+    }
+    
     paymentDone = true;
     paymentData = {
         razorpay_payment_id: paymentId,
@@ -146,22 +152,16 @@ function processSuccessfulPayment(paymentId, orderId) {
     
     restoreFormData();
     
-    // 🔥 AUTO-SUBMIT after 1.5 seconds
+    // ✅ SINGLE auto-submit - removed duplicate setTimeout
     setTimeout(() => {
-        if (currentView === 'paid' && validatePaidForm()) {
+        if (currentView === 'paid' && validatePaidForm() && !isSubmitting) {
             debug('🔄 AUTO-SUBMITTING after payment...');
             showToast('🔄 Processing registration...', 'info');
             handlePaidSubmit(null, true);
-        } else {
+        } else if (!isSubmitting) {
             showView('paid');
-            setTimeout(() => {
-                if (validatePaidForm()) {
-                    debug('🔄 AUTO-SUBMITTING after navigation...');
-                    handlePaidSubmit(null, true);
-                } else {
-                    showToast('✅ Payment Successful! Click "Complete Registration"', 'success');
-                }
-            }, 800);
+            // ✅ Only show message, don't auto-submit again
+            showToast('✅ Payment Successful! Click "Complete Registration"', 'success');
         }
     }, 1500);
 }
@@ -220,6 +220,11 @@ document.addEventListener('DOMContentLoaded', () => {
 function initFeedbackForm() {
     const form = $('feedbackForm');
     if (!form) return;
+    
+    // ✅ Prevent multiple initializations
+    if (form.dataset.initialized === 'true') return;
+    form.dataset.initialized = 'true';
+    
     const newForm = form.cloneNode(true);
     form.parentNode.replaceChild(newForm, form);
     initStarRating('fb_starRating');
@@ -243,9 +248,15 @@ function initFeedbackForm() {
     });
 }
 
+
 function initPaidForm() {
     const form = $('paidForm');
     if (!form) return;
+    
+    // ✅ Prevent multiple initializations
+    if (form.dataset.initialized === 'true') return;
+    form.dataset.initialized = 'true';
+    
     const newForm = form.cloneNode(true);
     form.parentNode.replaceChild(newForm, form);
     
@@ -446,13 +457,30 @@ async function handlePaidSubmit(e = null, autoSubmit = false) {
     if (e) e.preventDefault();
     debug('📤 Paid submit triggered', { autoSubmit });
     
+    // ✅ Triple check for duplicates
     if (isSubmitting) {
         debug('⚠️ Already submitting - ignoring duplicate');
         return;
     }
     
-    if (!paymentDone) { showToast('⚠️ Please complete payment first', 'error'); return; }
-    if (!validatePaidForm()) { showToast('Please fill all required fields', 'error'); return; }
+    if (!paymentDone) { 
+        showToast('⚠️ Please complete payment first', 'error'); 
+        return; 
+    }
+    
+    if (!validatePaidForm()) { 
+        showToast('Please fill all required fields', 'error'); 
+        return; 
+    }
+    
+    // ✅ Check if this payment was already submitted (DUPLICATE PREVENTION)
+    const existingSubmission = sessionStorage.getItem(`submitted_paid_${paymentData.razorpay_payment_id}`);
+    if (existingSubmission) {
+        debug('⚠️ This payment was already submitted');
+        showToast('✅ Registration already completed!', 'success');
+        showSuccess(collectPaidFormData(), 'paid');
+        return;
+    }
     
     // Restore payment data if needed
     if (!paymentData.razorpay_payment_id) {
@@ -463,7 +491,9 @@ async function handlePaidSubmit(e = null, autoSubmit = false) {
     }
     
     if (!paymentData.razorpay_payment_id) {
-        showToast('⚠️ Payment verification failed', 'error'); resetPaidForm(); return;
+        showToast('⚠️ Payment verification failed', 'error'); 
+        resetPaidForm(); 
+        return;
     }
     
     isSubmitting = true;  // ✅ PREVENT DUPLICATES
@@ -474,6 +504,10 @@ async function handlePaidSubmit(e = null, autoSubmit = false) {
         debug('📦 Data collected', data);
         
         await submitToGoogleSheets(data, 'audit');
+        
+        // ✅ Mark as submitted to prevent future duplicates
+        sessionStorage.setItem(`submitted_paid_${paymentData.razorpay_payment_id}`, 'true');
+        
         showSuccess(data, 'paid');
         
         // Clear session - PREVENT DUPLICATES
@@ -535,7 +569,15 @@ function resetPaidForm() {
 // ✅ Submit to Google Sheets - SINGLE ENTRY GUARANTEE
 async function submitToGoogleSheets(data, formType) {
     if (!CONFIG.GOOGLE_SCRIPT || CONFIG.GOOGLE_SCRIPT.includes('YOUR_')) {
-        debug('📋 Demo mode'); return true;
+        debug('📋 Demo mode'); 
+        return true;
+    }
+    
+    // ✅ Check for duplicate submission
+    const submissionKey = `${formType}_${data.razorpay_payment_id}_${data.timestamp}`;
+    if (sessionStorage.getItem(`submitted_${submissionKey}`)) {
+        debug('⚠️ Duplicate submission blocked');
+        return false;
     }
     
     debug(`📤 Sending ${formType} data...`);
@@ -550,13 +592,13 @@ async function submitToGoogleSheets(data, formType) {
             body: JSON.stringify(data)
         });
         
+        // ✅ Mark as submitted to prevent duplicates
+        sessionStorage.setItem(`submitted_${submissionKey}`, 'true');
+        
         debug(`✅ ${formType} sent (type: ${response.type})`);
         
-        // Backup with Beacon API
-        if (navigator.sendBeacon) {
-            navigator.sendBeacon(scriptURL, JSON.stringify(data));
-            debug('📡 Beacon sent');
-        }
+        // ❌ REMOVED sendBeacon - it was causing duplicates
+        // Only use fetch, not both
         
         return true;
         
@@ -564,12 +606,19 @@ async function submitToGoogleSheets(data, formType) {
         console.error(`${formType} error:`, error);
         debug(`❌ Error:`, error);
         
-        // Last resort backup
+        // Backup to localStorage only
         try {
             const backups = JSON.parse(localStorage.getItem('formBackups') || '[]');
-            backups.push({ data, formType, timestamp: new Date().toISOString() });
-            localStorage.setItem('formBackups', JSON.stringify(backups));
-            debug('💾 Backup saved');
+            // ✅ Check if already backed up
+            const exists = backups.some(b => 
+                b.data.razorpay_payment_id === data.razorpay_payment_id && 
+                b.formType === formType
+            );
+            if (!exists) {
+                backups.push({ data, formType, timestamp: new Date().toISOString() });
+                localStorage.setItem('formBackups', JSON.stringify(backups));
+                debug('💾 Backup saved');
+            }
         } catch (e) { debug('⚠️ Backup failed', e); }
         
         throw error;
