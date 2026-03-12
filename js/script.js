@@ -301,28 +301,37 @@ function initPaidForm() {
     }
     
     // Payment button handler
-    const payBtn = $('payBtn');
-    if (payBtn) {
-        payBtn.addEventListener('click', (e) => {
-            if (!validatePaidForm()) {
-                e.preventDefault();
-                showToast('Please fill all required fields first', 'error');
-                return false;
-            }
-            
-            // Save form data BEFORE redirect
-            try {
-                const formData = collectPaidFormData();
-                sessionStorage.setItem('tempPaidData', JSON.stringify(formData));
-                debug('💾 Form data saved before payment');
-            } catch (err) {
-                debug('⚠️ Save failed', err);
-            }
-            
-            debug('🔗 Redirecting to Razorpay...');
-            return true;
-        });
-    }
+    // Payment button handler - UPDATED
+const payBtn = $('payBtn');
+if (payBtn) {
+    payBtn.addEventListener('click', (e) => {
+        if (!validatePaidForm()) {
+            e.preventDefault();
+            showToast('Please fill all required fields first', 'error');
+            return false;
+        }
+        
+        // Form data save करें
+        try {
+            const formData = collectPaidFormData();
+            sessionStorage.setItem('tempPaidData', JSON.stringify(formData));
+            debug('💾 Form data saved');
+        } catch (err) {
+            debug('⚠️ Save failed', err);
+        }
+        
+        // ✅ MANUAL: Razorpay URL में return_url add करें
+        const razorpayUrl = new URL(CONFIG.PAYMENT_LINK);
+        razorpayUrl.searchParams.set('return_url', CONFIG.RETURN_URL);
+        
+        // Redirect करें
+        debug('🔗 Redirecting to:', razorpayUrl.toString());
+        window.location.href = razorpayUrl.toString();
+        
+        e.preventDefault(); // Default link behavior रोकें
+        return false;
+    });
+}
     
     // Form submit handler
     newForm.addEventListener('submit', (e) => {
