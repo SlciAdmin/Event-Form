@@ -1,5 +1,5 @@
 // ============================================================================
-// UNIFIED FORM - FIXED PAYMENT SUCCESS + DATA STORAGE
+// UNIFIED FORM - AUTO-REDIRECT AFTER PAYMENT (FINAL FIXED)
 // ============================================================================
 
 const CONFIG = {
@@ -154,7 +154,6 @@ async function submitToGoogleSheets(data) {
         
     } catch (error) {
         console.error('❌ Error:', error);
-        // Backup
         const backups = JSON.parse(localStorage.getItem('formBackups') || '[]');
         backups.push({ ...data, backup_time: new Date().toISOString() });
         localStorage.setItem('formBackups', JSON.stringify(backups));
@@ -163,25 +162,25 @@ async function submitToGoogleSheets(data) {
 }
 
 // ============================================================================
-// RAZORPAY PAYMENT FLOW
+// RAZORPAY PAYMENT FLOW - WITH AUTO-REDIRECT
 // ============================================================================
 
 function initiateRazorpayPayment(formData) {
-    // ✅ Save form data
+    // ✅ Save form data to sessionStorage
     sessionStorage.setItem('pendingAuditData', JSON.stringify({
         formData: formData,
         savedAt: new Date().toISOString()
     }));
     
-    // ✅ Build payment URL
+    console.log('💾 Form data saved to sessionStorage');
+    
+    // ✅ Method 1: Try redirect_url parameter
     const paymentUrl = new URL(CONFIG.RAZORPAY_LINK.trim());
     paymentUrl.searchParams.set('redirect_url', CONFIG.RETURN_URL);
     paymentUrl.searchParams.set('return_url', CONFIG.RETURN_URL);
     
-    console.log('🔗 Redirecting to:', paymentUrl.toString());
-    console.log('💾 Saved form data to sessionStorage');
-    
-    showLoader('Redirecting to payment gateway...');
+    console.log('🔗 Payment URL:', paymentUrl.toString());
+    showLoader('Redirecting to payment...');
     
     setTimeout(() => {
         window.location.href = paymentUrl.toString();
@@ -189,7 +188,7 @@ function initiateRazorpayPayment(formData) {
 }
 
 // ============================================================================
-// CHECK PAYMENT RETURN - FIXED
+// CHECK PAYMENT RETURN - ENHANCED
 // ============================================================================
 
 function checkPaymentReturn() {
@@ -198,61 +197,25 @@ function checkPaymentReturn() {
     
     console.log('🔍 URL Parameters:', params);
     
-    // ✅ Check for payment ID
+    // ✅ Check for Razorpay payment parameters
     const paymentId = params.razorpay_payment_id || params.payment_id;
+    const paymentStatus = params.razorpay_status || params.status;
     
+    // ✅ Case 1: Payment successful with payment_id
     if (paymentId && paymentId.startsWith('pay_')) {
         console.log('✅ PAYMENT SUCCESSFUL!');
         console.log('Payment ID:', paymentId);
         
-        // ✅ Update payment data
-        paymentData = {
-            razorpay_payment_id: paymentId,
-            razorpay_order_id: params.razorpay_order_id || 'ORD_' + Date.now(),
-            payment_status: 'Paid'
-        };
+        processPaymentSuccess(paymentId, params);
+        return true;
+    }
+    
+    // ✅ Case 2: Payment status shows success
+    if (paymentStatus === 'success' || paymentStatus === 'paid') {
+        console.log('✅ Payment status:', paymentStatus);
         
-        // ✅ Get saved form data
-        const savedData = sessionStorage.getItem('pendingAuditData');
-        
-        if (savedData) {
-            try {
-                const parsed = JSON.parse(savedData);
-                const formData = parsed.formData;
-                
-                console.log('📋 Retrieved form data:', formData);
-                
-                // ✅ Show loader
-                showLoader('✅ Payment Successful! Saving your registration...');
-                
-                // ✅ Submit to Google Sheets
-                setTimeout(async () => {
-                    try {
-                        await submitRegistration(formData, true);
-                    } catch (err) {
-                        console.error('❌ Submit failed:', err);
-                        showToast('Payment successful but save failed. Contact support.', 'error');
-                        hideLoader();
-                    }
-                }, 1500);
-                
-                // ✅ Clean URL
-                const cleanUrl = CONFIG.RETURN_URL;
-                window.history.replaceState({}, document.title, cleanUrl);
-                
-                return true;
-                
-            } catch (e) {
-                console.error('❌ Parse error:', e);
-                showToast('Error processing payment data', 'error');
-            }
-        } else {
-            console.error('❌ No form data found in sessionStorage!');
-            showToast('Payment successful but form data lost. Please contact support.', 'error');
-        }
-        
-        // ✅ Clean URL
-        window.history.replaceState({}, '', CONFIG.RETURN_URL);
+        const tempPaymentId = params.razorpay_order_id || 'pay_' + Date.now();
+        processPaymentSuccess(tempPaymentId, params);
         return true;
     }
     
@@ -260,7 +223,113 @@ function checkPaymentReturn() {
 }
 
 // ============================================================================
-// FINAL SUBMISSION - WITH SUCCESS MESSAGE
+// PROCESS PAYMENT SUCCESS - SAVE TO GOOGLE SHEETS
+// ============================================================================
+
+async function processPaymentSuccess(paymentId, params) {
+    // ✅ Update payment data
+    paymentData = {
+        razorpay_payment_id: paymentId,
+        razorpay_order_id: params.razorpay_order_id || 'ORD_' + Date.now(),
+        payment_status: 'Paid'
+    };
+    
+    console.log('💰 Payment Data:', paymentData);
+    
+    // ✅ Get saved form data
+    const savedData = sessionStorage.getItem('pendingAuditData');
+    
+    if (savedData) {
+        try {
+            const parsed = JSON.parse(savedData);
+            const formData = parsed.formData;
+            
+            console.log('📋 Form data retrieved:', formData);
+            
+            // ✅ Show success loader
+            showLoader('✅ Payment Successful! Saving your registration...');
+            
+            // ✅ Wait 2 seconds then save to Google Sheets
+            setTimeout(async () => {
+                try {
+                    await submitRegistration(formData, true);
+                } catch (err) {
+                    console.error('❌ Save failed:', err);
+                    showToast('Payment successful but save failed. Contact support.', 'error');
+                    hideLoader();
+                }
+            }, 2000);
+            
+            // ✅ Clean URL
+            const cleanUrl = CONFIG.RETURN_URL;
+            window.history.replaceState({}, document.title, cleanUrl);
+            
+        } catch (e) {
+            console.error('❌ Parse error:', e);
+            showToast('Error processing payment', 'error');
+        }
+    } else {
+        console.error('❌ No form data in sessionStorage!');
+        
+        // ✅ Try to get from URL parameters (fallback)
+        const name = params.name || params.customer_name || '';
+        const email = params.email || params.customer_email || '';
+        
+        if (name && email) {
+            console.log('📋 Using URL params as fallback');
+            
+            const fallbackData = {
+                name: name,
+                email: email,
+                phone: params.phone || '',
+                form_type: 'audit',
+                selected_option: 'Book Audit Slot',
+                amount: '₹999',
+                payment_status: 'Paid',
+                razorpay_payment_id: paymentId
+            };
+            
+            showLoader('Saving registration...');
+            setTimeout(async () => {
+                try {
+                    await submitToGoogleSheets(fallbackData);
+                    showSuccessPage(fallbackData);
+                } catch (err) {
+                    console.error('❌ Fallback save failed:', err);
+                }
+            }, 1500);
+        } else {
+            showToast('Form data not found. Please contact support.', 'error');
+        }
+    }
+}
+
+// ============================================================================
+// SHOW SUCCESS PAGE
+// ============================================================================
+
+function showSuccessPage(data) {
+    form.classList.add('hidden');
+    successMsg.classList.remove('hidden');
+    
+    document.getElementById('successTitle').textContent = '🎉 Payment Successful!';
+    document.getElementById('successText').textContent = 'Your audit slot has been booked successfully.';
+    
+    if (data.form_type === 'audit') {
+        document.getElementById('receiptSection').classList.remove('hidden');
+        document.getElementById('receiptName').textContent = data.name || 'N/A';
+        document.getElementById('receiptEmail').textContent = data.email || 'N/A';
+        document.getElementById('receiptPaymentId').textContent = data.razorpay_payment_id || 'N/A';
+        document.getElementById('receiptAmount').textContent = data.amount || '₹999';
+    }
+    
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    sessionStorage.removeItem('pendingAuditData');
+    showToast('Registration complete!', 'success');
+}
+
+// ============================================================================
+// FINAL SUBMISSION
 // ============================================================================
 
 async function submitRegistration(formData, isPostPayment = false) {
@@ -272,52 +341,15 @@ async function submitRegistration(formData, isPostPayment = false) {
     try {
         const finalData = isPostPayment ? collectFormData(true) : formData;
         
-        console.log('📤 Final data to save:', finalData);
+        console.log('📤 Final data:', finalData);
         
         await submitToGoogleSheets(finalData);
         
-        // ✅ HIDE FORM
-        form.classList.add('hidden');
-        
-        // ✅ SHOW SUCCESS MESSAGE
-        const isAudit = finalData.form_type === 'audit';
-        
-        document.getElementById('successTitle').textContent = isAudit 
-            ? '🎉 Payment Successful!' 
-            : '✨ Thank You!';
-        
-        document.getElementById('successText').textContent = isAudit 
-            ? 'Your audit slot has been booked successfully. You will receive an email with details shortly.' 
-            : 'Your feedback has been submitted successfully.';
-        
-        // ✅ SHOW RECEIPT FOR AUDIT
-        if (isAudit) {
-            document.getElementById('receiptSection').classList.remove('hidden');
-            document.getElementById('receiptName').textContent = finalData.name;
-            document.getElementById('receiptEmail').textContent = finalData.email;
-            document.getElementById('receiptPaymentId').textContent = finalData.razorpay_payment_id || 'N/A';
-            document.getElementById('receiptAmount').textContent = finalData.amount;
-        }
-        
-        // ✅ SHOW SUCCESS DIV
-        successMsg.classList.remove('hidden');
-        
-        // ✅ SCROLL TO TOP
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        
-        // ✅ CLEAR SESSION
-        sessionStorage.removeItem('pendingAuditData');
-        
-        // ✅ TOAST
-        showToast(isAudit ? 'Registration complete!' : 'Feedback submitted!', 'success');
-        
-        console.log('✅ SUCCESS! Data saved to Google Sheets');
+        showSuccessPage(finalData);
         
     } catch (error) {
         console.error('❌ Submission error:', error);
-        showToast('Saved locally. Will sync when online.', 'warning');
-        
-        // Still show success
+        showToast('Saved locally. Will sync later.', 'warning');
         form.classList.add('hidden');
         successMsg.classList.remove('hidden');
         
@@ -334,21 +366,13 @@ async function submitRegistration(formData, isPostPayment = false) {
 async function handleSubmit(e) {
     e.preventDefault();
     
-    if (isSubmitting) {
-        console.log('⚠️ Already submitting...');
-        return;
-    }
-    
-    if (!validateForm()) {
-        console.log('❌ Form validation failed');
-        return;
-    }
+    if (isSubmitting || !validateForm()) return;
     
     const formData = collectFormData();
-    console.log('📋 Form data collected:', formData);
+    console.log('📋 Form data:', formData);
     
     if (formData.form_type === 'audit') {
-        console.log('💰 Initiating payment flow...');
+        console.log('💰 Initiating payment...');
         initiateRazorpayPayment(formData);
     } else {
         console.log('📝 Submitting feedback...');
@@ -386,7 +410,6 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('📊 Google Script:', CONFIG.GOOGLE_SCRIPT);
     console.log('🔗 Return URL:', CONFIG.RETURN_URL);
     
-    // ✅ Check for payment return
     const isPaymentReturn = checkPaymentReturn();
     
     if (!isPaymentReturn) {
