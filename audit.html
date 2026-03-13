@@ -15,6 +15,7 @@
         </div>
         
         <form id="auditForm" class="main-form" novalidate>
+            <!-- Details Section -->
             <div class="section-title"><i class="fas fa-user-circle"></i> Your Details</div>
             
             <div class="form-row">
@@ -57,6 +58,7 @@
                 </div>
             </div>
             
+            <!-- Rating Section -->
             <div class="section-title"><i class="fas fa-star"></i> Experience Rating</div>
             <div class="form-row">
                 <div class="field full">
@@ -71,6 +73,7 @@
                 </div>
             </div>
             
+            <!-- Remarks -->
             <div class="form-row">
                 <div class="field full">
                     <label for="remarks"><i class="fas fa-comment"></i> Remarks (Optional)</label>
@@ -78,7 +81,7 @@
                 </div>
             </div>
             
-            <!-- Payment Card -->
+            <!-- ✅ SINGLE PAYMENT & ACTION BUTTON -->
             <div class="payment-card">
                 <div class="price-header">
                     <span class="price-label">Special Audit Fee</span>
@@ -89,8 +92,13 @@
                     <span class="original-price">₹15,000</span>
                 </div>
                 
-                <button type="button" id="payNowBtn" class="pay-btn">
-                    <i class="fas fa-lock"></i> Pay ₹1 Securely via Razorpay
+                <div id="paymentStatus" class="payment-status pending">
+                    ⏳ Click to Pay & Submit
+                </div>
+
+                <!-- ✅ SINGLE BUTTON: CLICK → SEND TO EXCEL → OPEN RAZORPAY -->
+                <button type="button" id="payCompleteBtn" class="pay-btn">
+                    <i class="fas fa-lock"></i> Pay ₹1 & Complete Registration
                 </button>
                 
                 <div class="payment-methods">
@@ -98,20 +106,14 @@
                     <i class="fas fa-mobile-alt"></i> UPI
                     <i class="fas fa-wallet"></i> Wallet
                 </div>
-                
-                <div id="paymentStatus" class="payment-status pending">
-                    ⏳ Payment Pending
-                </div>
             </div>
-            
-            <button type="submit" id="completeBtn" class="btn-complete" disabled>
-                <i class="fas fa-check-circle"></i> Complete Registration
-            </button>
         </form>
         
+        <!-- Success Message -->
         <div id="auditSuccessMsg" class="success-message hidden">
             <div class="success-icon"><i class="fas fa-check-circle"></i></div>
             <h3>Registration Successful!</h3>
+            <p>Your data has been sent to our records.</p>
             <div class="receipt-details">
                 <p><strong>Name:</strong> <span id="receiptName"></span></p>
                 <p><strong>Email:</strong> <span id="receiptEmail"></span></p>
@@ -129,7 +131,6 @@
     <div id="toast" class="toast hidden"></div>
     <div id="loader" class="loader hidden"><div class="spin"></div><p>Processing...</p></div>
     
-    <!-- ✅ CORRECTED: Script in same folder -->
     <script src="audit.js"></script>
 </body>
 </html>
