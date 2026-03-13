@@ -3,8 +3,8 @@
 // ============================================================================
 
 const CONFIG = {
-    GOOGLE_SCRIPT: "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec",
-    RAZORPAY_LINK: "https://rzp.io/rzp/YOUR_PAYMENT_LINK",
+    GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbwZ6j2th77Oa--2GZK_k0OEIdktJ-Vf8bm3tuaqM7n55NVrkhcAMhtfRKzwymBwT_vfow/exec",
+    RAZORPAY_LINK: "https://rzp.io/rzp/5NCrTAI",
     RETURN_URL: window.location.href.split('?')[0] // Clean URL for return
 };
 
