@@ -3,7 +3,7 @@
 // ============================================================================
 
 const CONFIG = {
-    GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbwKxN7MxrygVdCBSg-FTxAyL8P_FqN0lE8YjJl8Um7nr_uWNNgUWzPoCg6SuFPiViAVvQ/exec",
+    GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbx_NgZ2FGU_NHsZN2y7K2JY6SwtPSkGXNDq99IKUgDfeVLppi0xUBid7zXwr33oW1cyHg/exec",
     RAZORPAY_LINK: "https://rzp.io/rzp/5NCrTAI",
     RETURN_URL: window.location.origin + window.location.pathname
 };
