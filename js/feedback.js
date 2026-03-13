@@ -1,9 +1,7 @@
 // ============================================================================
 // FEEDBACK FORM - GOOGLE SHEETS INTEGRATION
-// URL: https://script.google.com/macros/s/AKfycbxSAJHIbkTYMxQCZYbYXxaZVX-MmkfOzQjaqs81mjQsy3Ua3TlHwx9QQpTlCC_JdcglNA/exec
 // ============================================================================
 
-// ✅ NO TRAILING SPACE - CRITICAL FIX
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxSAJHIbkTYMxQCZYbYXxaZVX-MmkfOzQjaqs81mjQsy3Ua3TlHwx9QQpTlCC_JdcglNA/exec";
 
 // DOM Elements
@@ -195,4 +193,4 @@ document.querySelectorAll('.star-rating label').forEach(label => {
 // Submit event
 form.addEventListener('submit', handleSubmit);
 
-console.log('✅ Feedback form initialized - URL:', GOOGLE_SCRIPT_URL);
+console.log('✅ Feedback form initialized');
