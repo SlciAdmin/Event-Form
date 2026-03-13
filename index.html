@@ -1,171 +1,190 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Event Registration - EventPro</title>
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Event Registration - EventPro</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <div class="form-container">
-        <!-- Header -->
-        <div class="form-header">
-            <h1><i class="fas fa-calendar-check"></i> Feedback and Audit Registration</h1>
-            <p class="subtitle">Share your experience & secure your audit slot</p>
-        </div>
-        
-        <form id="unifiedForm" class="main-form" novalidate>
-            <!-- Section 1: Personal Details -->
-            <div class="section-title"><i class="fas fa-user-circle"></i> Your Details</div>
-            
-            <div class="form-row">
-                <div class="field">
-                    <label for="name"><i class="fas fa-user"></i> Full Name <span class="req">*</span></label>
-                    <input type="text" id="name" name="name" placeholder="Your Full Name" required>
-                </div>
-                <div class="field">
-                    <label for="company"><i class="fas fa-building"></i> Company <span class="req">*</span></label>
-                    <input type="text" id="company" name="company" placeholder="Your Company" required>
-                </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="field">
-                    <label for="employees"><i class="fas fa-users"></i> Company Size <span class="req">*</span></label>
-                    <select id="employees" name="employees" required>
-                        <option value="">Select...</option>
-                        <option value="1-10">1-10 Employees</option>
-                        <option value="11-50">11-50 Employees</option>
-                        <option value="51-200">51-200 Employees</option>
-                        <option value="201-500">201-500 Employees</option>
-                        <option value="500+">500+ Employees</option>
-                    </select>
-                </div>
-                <div class="field">
-                    <label for="phone"><i class="fas fa-phone"></i> Mobile <span class="req">*</span></label>
-                    <input type="tel" id="phone" name="phone" placeholder="9876543210" pattern="[6-9][0-9]{9}" required>
-                </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="field">
-                    <label for="email"><i class="fas fa-envelope"></i> Email <span class="req">*</span></label>
-                    <input type="email" id="email" name="email" placeholder="you@email.com" required>
-                </div>
-                <div class="field">
-                    <label for="city"><i class="fas fa-city"></i> City <span class="req">*</span></label>
-                    <input type="text" id="city" name="city" placeholder="Your City" required>
-                </div>
-            </div>
-            
-            <!-- Section 2: Session Rating -->
-            <div class="section-title"><i class="fas fa-star"></i> Session Rating</div>
-            <div class="form-row">
-                <div class="field full">
-                    <label>Overall Experience <span class="req">*</span></label>
-                    <div class="star-rating" id="starRating">
-                        <input type="radio" id="star5" name="rating" value="5"><label for="star5">★</label>
-                        <input type="radio" id="star4" name="rating" value="4"><label for="star4">★</label>
-                        <input type="radio" id="star3" name="rating" value="3"><label for="star3">★</label>
-                        <input type="radio" id="star2" name="rating" value="2"><label for="star2">★</label>
-                        <input type="radio" id="star1" name="rating" value="1" required><label for="star1">★</label>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="field full">
-                    <label for="remarks"><i class="fas fa-comment"></i> Additional Remarks</label>
-                    <textarea id="remarks" name="remarks" rows="3" placeholder="Your suggestions or feedback..."></textarea>
-                </div>
-            </div>
-            
-            <!-- Section 3: Choose Your Option -->
-            <div class="section-title"><i class="fas fa-check-circle"></i> Choose Any One</div>
-            <div class="option-selector">
-                <label class="option-card feedback-option" data-value="feedback">
-                    <input type="radio" name="form_type" value="feedback" checked>
-                    <div class="option-content">
-                        <i class="fas fa-comment-dots"></i>
-                        <h3>Submit Feedback</h3>
-                        <p>Share your experience</p>
-                        <span class="price">Click below button to submit</span>
-                    </div>
-                </label>
-                
-                <label class="option-card audit-option" data-value="audit">
-                    <input type="radio" name="form_type" value="audit">
-                    <div class="option-content">
-                        <i class="fas fa-clipboard-check"></i>
-                        <h3>Book Audit Slot</h3>
-                        <p>Share your experience & secure the slot</p>
-                        <div class="price-box">
-                            <span class="old-price">₹15,000</span>
-                            <span class="new-price">₹999 only</span>
-                        </div>
-                    </div>
-                </label>
-            </div>
-            
-            <!-- Payment Info (Hidden by default) -->
-            <div id="paymentInfo" class="payment-info hidden">
-                <div class="payment-card">
-                    <div class="price-display">
-                        <span class="current-price">₹999 only</span>
-                        <span class="original-price">₹15,000</span>
-                        <span class="discount-badge">93% OFF</span>
-                    </div>
-                    <p><i class="fas fa-lock"></i> Secure payment via Razorpay</p>
-                    <div class="payment-methods">
-                        <span><i class="fas fa-credit-card"></i> Cards</span>
-                        <span><i class="fas fa-wallet"></i> UPI</span>
-                        <span><i class="fas fa-university"></i> Net Banking</span>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Submit Button -->
-            <div class="form-actions">
-                <button type="submit" id="submitBtn" class="btn-submit">
-                    <i class="fas fa-paper-plane"></i> <span id="btnText">Submit Feedback</span>
-                </button>
-            </div>
-        </form>
-        
-        <!-- Success Message -->
-        <div id="successMsg" class="success-message hidden">
-            <div class="success-icon"><i class="fas fa-check-circle"></i></div>
-            <h3 id="successTitle">Thank You!</h3>
-            <p id="successText">Your feedback has been submitted successfully.</p>
-            
-            <div id="receiptSection" class="receipt-details hidden">
-                <p><strong>Name:</strong> <span id="receiptName"></span></p>
-                <p><strong>Email:</strong> <span id="receiptEmail"></span></p>
-                <p><strong>Payment ID:</strong> <span id="receiptPaymentId"></span></p>
-                <p><strong>Amount:</strong> <span id="receiptAmount">₹999 only</span></p>
-                <p><strong>Registration Type:</strong> <span id="receiptType">Audit Slot Booking</span></p>
-            </div>
-            
-            <div class="success-actions">
-                <a href="index.html" class="btn-home"><i class="fas fa-home"></i> Back to Home</a>
-            </div>
-        </div>
+<div class="form-container">
+  <!-- Header -->
+  <div class="form-header">
+    <h1><i class="fas fa-calendar-check"></i> Feedback and Audit Registration</h1>
+    <p class="subtitle">Share your experience & secure your audit slot</p>
+  </div>
+
+  <form id="unifiedForm" class="main-form" novalidate>
+    <!-- Section 1: Personal Details -->
+    <div class="section-title"><i class="fas fa-user-circle"></i> Your Details</div>
+    
+    <div class="form-row">
+      <div class="field">
+        <label for="name"><i class="fas fa-user"></i> Full Name <span class="req">*</span></label>
+        <input type="text" id="name" name="name" placeholder="Your Full Name" required>
+      </div>
+      <div class="field">
+        <label for="company"><i class="fas fa-building"></i> Company <span class="req">*</span></label>
+        <input type="text" id="company" name="company" placeholder="Your Company" required>
+      </div>
     </div>
-    
-    <!-- Toast Notification -->
-    <div id="toast" class="toast hidden"></div>
-    
-    <!-- Loader -->
-    <div id="loader" class="loader hidden">
-        <div class="spin"></div>
-        <p id="loaderText">Processing...</p>
+
+    <div class="form-row">
+      <div class="field">
+        <label for="employees"><i class="fas fa-users"></i> Company Size <span class="req">*</span></label>
+        <select id="employees" name="employees" required>
+          <option value="">Select...</option>
+          <option value="1-10">1-10 Employees</option>
+          <option value="11-50">11-50 Employees</option>
+          <option value="51-200">51-200 Employees</option>
+          <option value="201-500">201-500 Employees</option>
+          <option value="500+">500+ Employees</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="phone"><i class="fas fa-phone"></i> Mobile <span class="req">*</span></label>
+        <input type="tel" id="phone" name="phone" placeholder="9876543210" pattern="[6-9][0-9]{9}" required>
+      </div>
     </div>
+
+    <div class="form-row">
+      <div class="field">
+        <label for="email"><i class="fas fa-envelope"></i> Email <span class="req">*</span></label>
+        <input type="email" id="email" name="email" placeholder="you@email.com" required>
+      </div>
+      <div class="field">
+        <label for="city"><i class="fas fa-city"></i> City <span class="req">*</span></label>
+        <input type="text" id="city" name="city" placeholder="Your City" required>
+      </div>
+    </div>
+
+    <!-- Section 2: Session Rating -->
+    <div class="section-title"><i class="fas fa-star"></i> Session Rating</div>
+    <div class="form-row">
+      <div class="field full">
+        <label>Overall Experience <span class="req">*</span></label>
+        <div class="star-rating" id="starRating">
+          <input type="radio" id="star5" name="rating" value="5"><label for="star5">★</label>
+          <input type="radio" id="star4" name="rating" value="4"><label for="star4">★</label>
+          <input type="radio" id="star3" name="rating" value="3"><label for="star3">★</label>
+          <input type="radio" id="star2" name="rating" value="2"><label for="star2">★</label>
+          <input type="radio" id="star1" name="rating" value="1" required><label for="star1">★</label>
+        </div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field full">
+        <label for="remarks"><i class="fas fa-comment"></i> Additional Remarks</label>
+        <textarea id="remarks" name="remarks" rows="3" placeholder="Your suggestions or feedback..."></textarea>
+      </div>
+    </div>
+
+    <!-- Section 3: Choose Your Option -->
+    <div class="section-title"><i class="fas fa-check-circle"></i> Choose Any One</div>
+    <div class="option-selector">
+      <label class="option-card feedback-option" data-value="feedback">
+        <input type="radio" name="form_type" value="feedback" checked>
+        <div class="option-content">
+          <i class="fas fa-comment-dots"></i>
+          <h3>Submit Feedback</h3>
+          <p>Share your experience</p>
+          <span class="price">Free Submission</span>
+        </div>
+      </label>
+      <label class="option-card audit-option" data-value="audit">
+        <input type="radio" name="form_type" value="audit">
+        <div class="option-content">
+          <i class="fas fa-clipboard-check"></i>
+          <h3>Book Audit Slot</h3>
+          <p>Share your experience & secure the slot</p>
+          <div class="price-box">
+            <span class="old-price">₹15,000</span>
+            <span class="new-price">₹999 only</span>
+          </div>
+        </div>
+      </label>
+    </div>
+
+    <!-- Payment Info (Hidden by default) -->
+    <div id="paymentInfo" class="payment-info hidden">
+      <div class="payment-card">
+        <div class="price-display">
+          <span class="current-price">₹999 only</span>
+          <span class="original-price">₹15,000</span>
+          <span class="discount-badge">93% OFF</span>
+        </div>
+        <p><i class="fas fa-lock"></i> Secure payment via Razorpay</p>
+        <div class="payment-methods">
+          <span><i class="fas fa-credit-card"></i> Cards</span>
+          <span><i class="fas fa-wallet"></i> UPI</span>
+          <span><i class="fas fa-university"></i> Net Banking</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Submit Button -->
+    <div class="form-actions">
+      <button type="submit" id="submitBtn" class="btn-submit">
+        <i class="fas fa-paper-plane"></i> <span id="btnText">Submit Feedback</span>
+      </button>
+    </div>
+  </form>
+
+  <!-- Success Message -->
+  <div id="successMsg" class="success-message hidden">
+    <div class="success-icon"><i class="fas fa-check-circle"></i></div>
+    <h3 id="successTitle">Thank You!</h3>
+    <p id="successText">Your feedback has been submitted successfully.</p>
     
-    <footer>
-        <p>© 2026 EventPro • All Rights Reserved</p>
-    </footer>
-    
-    <script src="js/script.js"></script>
+    <div id="receiptSection" class="receipt-details hidden">
+      <p><strong>Name:</strong> <span id="receiptName"></span></p>
+      <p><strong>Email:</strong> <span id="receiptEmail"></span></p>
+      <p><strong>Payment ID:</strong> <span id="receiptPaymentId"></span></p>
+      <p><strong>Amount:</strong> <span id="receiptAmount">₹999 only</span></p>
+      <p><strong>Registration Type:</strong> <span id="receiptType">Audit Slot Booking</span></p>
+    </div>
+
+    <!-- Email Confirmation Message -->
+    <div class="email-confirmation">
+      <p><i class="fas fa-envelope"></i> 📧 <strong>Check your email!</strong> We've sent 2 important PDFs to <span id="userEmailDisplay"></span></p>
+    </div>
+
+    <!-- Social Media Follow Section -->
+    <div class="social-follow-section">
+      <p class="follow-text">🌟 Follow us for more content & updates:</p>
+      <div class="social-icons">
+        <a href="https://www.instagram.com/slci.in?igsh=Nm45dzI3eWc0Mm5q" target="_blank" class="social-btn instagram" title="Follow on Instagram">
+          <i class="fab fa-instagram"></i> Instagram
+        </a>
+        <a href="https://www.linkedin.com/company/shakti-legal-compliance-india/" target="_blank" class="social-btn linkedin" title="Connect on LinkedIn">
+          <i class="fab fa-linkedin-in"></i> LinkedIn
+        </a>
+        <a href="https://youtube.com/@shaktilegalcomplianceindia?si=oPeb9C0IcpA9CSh9" target="_blank" class="social-btn youtube" title="Subscribe on YouTube">
+          <i class="fab fa-youtube"></i> YouTube
+        </a>
+      </div>
+    </div>
+
+    <div class="success-actions">
+      <a href="index.html" class="btn-home"><i class="fas fa-home"></i> Back to Home</a>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast" class="toast hidden"></div>
+
+<!-- Loader -->
+<div id="loader" class="loader hidden">
+  <div class="spin"></div>
+  <p id="loaderText">Processing...</p>
+</div>
+
+<footer>
+  <p>© 2026 EventPro • All Rights Reserved</p>
+</footer>
+
+<script src="js/script.js"></script>
 </body>
 </html>
