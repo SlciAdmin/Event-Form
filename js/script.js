@@ -1,10 +1,10 @@
 // ============================================================================
-// UNIFIED FORM - GOOGLE SHEETS + RAZORPAY INTEGRATION (FINAL PRODUCTION)
+// UNIFIED FORM - GOOGLE SHEETS + RAZORPAY (FINAL PRODUCTION v3)
 // ============================================================================
 
 const CONFIG = {
-    // ✅ UPDATED: Your new Google Script URL (trimmed, no spaces)
-    GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbwKF8j8Qa0rtw194dn8PPhJVcITgFzapUqVH2IRwrr4ObaqSFz0aukdGT_zETMvVBwGDA/exec",
+    // ✅ UPDATED: Your Google Script URL - TRIMMED, NO SPACES
+    GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbzO4kvkP9jdvWVRfLbU4SWy4m_xOnzkdwehzqAUljC-Ol3X4gz2iy6IPODpy92rstSr0w/exec",
     RAZORPAY_LINK: "https://rzp.io/rzp/5NCrTAI",
     RETURN_URL: window.location.href.split('?')[0]
 };
@@ -50,42 +50,33 @@ function hideLoader() {
 
 function validateField(field) {
     const value = field.value.trim();
-    
     if (field.hasAttribute('required') && !value) {
         field.classList.add('invalid');
         return false;
     }
-    
     if (field.type === 'email' && value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
         field.classList.add('invalid');
-        showToast('Please enter a valid email', 'error');
+        showToast('Please enter valid email', 'error');
         return false;
     }
-    
     if (field.type === 'tel' && value && !/^[6-9][0-9]{9}$/.test(value)) {
         field.classList.add('invalid');
-        showToast('Enter valid 10-digit mobile number', 'error');
+        showToast('Enter valid 10-digit mobile', 'error');
         return false;
     }
-    
     field.classList.remove('invalid');
     return true;
 }
 
 function validateForm() {
     let isValid = true;
-    const requiredFields = form.querySelectorAll('input[required], select[required], textarea[required]');
-    
-    requiredFields.forEach(field => {
-        if (!validateField(field)) isValid = false;
+    form.querySelectorAll('input[required], select[required], textarea[required]').forEach(f => {
+        if (!validateField(f)) isValid = false;
     });
-    
-    const ratingSelected = document.querySelector('input[name="rating"]:checked');
-    if (!ratingSelected) {
+    if (!document.querySelector('input[name="rating"]:checked')) {
         showToast('Please select a rating', 'error');
         isValid = false;
     }
-    
     return isValid;
 }
 
@@ -97,9 +88,8 @@ optionCards.forEach(card => {
     card.addEventListener('click', function() {
         optionCards.forEach(c => c.classList.remove('selected'));
         this.classList.add('selected');
-        
-        const value = this.querySelector('input').value;
-        if (value === 'audit') {
+        const val = this.querySelector('input').value;
+        if (val === 'audit') {
             btnText.textContent = 'Pay ₹999 & Register';
             paymentInfo.classList.remove('hidden');
         } else {
@@ -110,7 +100,7 @@ optionCards.forEach(card => {
 });
 
 // ============================================================================
-// DATA COLLECTION - TRACKS USER SELECTION PROPERLY
+// DATA COLLECTION - TRACKS USER SELECTION
 // ============================================================================
 
 function collectFormData(isPostPayment = false) {
@@ -126,22 +116,18 @@ function collectFormData(isPostPayment = false) {
         phone: document.getElementById('phone').value.trim(),
         email: document.getElementById('email').value.trim(),
         city: document.getElementById('city').value.trim(),
-        
-        // Feedback Fields
+        // Feedback
         rating: rating,
         remarks: document.getElementById('remarks').value.trim() || 'None',
-        
-        // ✅ KEY TRACKING: Excel mein clear dikhega kisne kya select kiya
-        form_type: formType,  // "feedback" OR "audit" ← MAIN FILTER COLUMN
+        // ✅ TRACKING: Excel mein clear dikhega kisne kya select kiya
+        form_type: formType,  // ← "feedback" ya "audit" - MAIN FILTER
         selected_option: formType === 'feedback' ? 'Submit Feedback' : 'Book Audit Slot',
-        
-        // Payment Fields
+        // Payment
         amount: formType === 'audit' ? '₹999' : '₹0',
         payment_status: isPostPayment ? paymentData.payment_status : (formType === 'audit' ? 'Initiated' : 'Not Applicable'),
         razorpay_payment_id: paymentData.razorpay_payment_id || (formType === 'audit' ? 'Pending' : 'N/A'),
         razorpay_order_id: paymentData.razorpay_order_id || (formType === 'audit' ? 'Pending' : 'N/A'),
-        
-        // Metadata for tracking
+        // Metadata
         timestamp: new Date().toISOString(),
         local_time: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
         submission_source: isPostPayment ? 'Post-Payment-Return' : 'Direct-Submit',
@@ -151,29 +137,29 @@ function collectFormData(isPostPayment = false) {
 }
 
 // ============================================================================
-// GOOGLE SHEETS SUBMISSION
+// GOOGLE SHEETS SUBMISSION - FIXED FOR GAS
 // ============================================================================
 
 async function submitToGoogleSheets(data) {
-    console.log('📤 Sending to Sheets:', { 
-        form_type: data.form_type, 
-        name: data.name, 
-        payment_status: data.payment_status 
-    });
+    console.log('📤 Sending to Sheets:', { form_type: data.form_type, name: data.name });
     
     try {
-        await fetch(CONFIG.GOOGLE_SCRIPT, {
+        // ✅ Use FormData for better Google Apps Script compatibility
+        const formData = new FormData();
+        formData.append('payload', JSON.stringify(data));
+        
+        const response = await fetch(CONFIG.GOOGLE_SCRIPT, {
             method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
+            body: formData
+            // ✅ No custom headers - browser sets them automatically for FormData
         });
-        console.log('✅ Data sent successfully');
+        
+        console.log('✅ Sent successfully, status:', response.status);
         return true;
     } catch (error) {
         console.error('❌ Submission error:', error);
         
-        // Backup to localStorage if offline
+        // ✅ Backup to localStorage if offline/error
         const backups = JSON.parse(localStorage.getItem('formBackups') || '[]');
         backups.push({ ...data, backup_time: new Date().toISOString(), status: 'pending_sync' });
         localStorage.setItem('formBackups', JSON.stringify(backups));
@@ -188,13 +174,13 @@ async function submitToGoogleSheets(data) {
 
 function initiateRazorpayPayment(formData) {
     return new Promise((resolve) => {
-        // Save complete form data before redirect
-        sessionStorage.setItem('pendingAuditData', JSON.stringify({
-            formData: formData,
-            timestamp: Date.now()
+        // ✅ Save form data before redirect
+        sessionStorage.setItem('pendingAuditData', JSON.stringify({ 
+            formData: formData, 
+            ts: Date.now() 
         }));
         
-        // Build payment URL with return parameters
+        // ✅ Build payment URL with return parameters
         const paymentUrl = new URL(CONFIG.RAZORPAY_LINK.trim());
         paymentUrl.searchParams.set('redirect_url', CONFIG.RETURN_URL);
         paymentUrl.searchParams.set('return_url', CONFIG.RETURN_URL);
@@ -202,9 +188,10 @@ function initiateRazorpayPayment(formData) {
         console.log('🔗 Redirecting to Razorpay:', paymentUrl.toString());
         showLoader('Redirecting to secure payment...');
         
+        // ✅ Redirect after small delay
         setTimeout(() => {
             window.location.href = paymentUrl.toString();
-        }, 600);
+        }, 500);
         
         resolve();
     });
@@ -215,22 +202,22 @@ function initiateRazorpayPayment(formData) {
 // ============================================================================
 
 function checkPaymentReturn() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const params = Object.fromEntries(urlParams.entries());
+    const params = new URLSearchParams(window.location.search);
+    const paymentId = params.get('razorpay_payment_id') || params.get('payment_id');
     
-    console.log('🔍 URL params:', params);
-    
-    const paymentId = params.razorpay_payment_id || params.payment_id;
+    console.log('🔍 Checking payment params:', { paymentId });
     
     if (paymentId && paymentId.startsWith('pay_')) {
         console.log('✅ PAYMENT DETECTED! ID:', paymentId);
         
+        // ✅ Update payment data
         paymentData = {
             razorpay_payment_id: paymentId,
-            razorpay_order_id: params.razorpay_order_id || 'ORDER_' + Date.now(),
+            razorpay_order_id: params.get('razorpay_order_id') || 'ORD_' + Date.now(),
             payment_status: 'Paid'
         };
         
+        // ✅ Retrieve and submit saved form data
         const saved = sessionStorage.getItem('pendingAuditData');
         if (saved) {
             try {
@@ -238,12 +225,11 @@ function checkPaymentReturn() {
                 showLoader('Payment verified. Saving registration...');
                 
                 setTimeout(() => {
-                    submitRegistration(formData, true);
-                }, 1200);
+                    submitRegistration(formData, true); // true = post-payment
+                }, 1000);
                 
-                const cleanUrl = CONFIG.RETURN_URL;
-                window.history.replaceState({}, document.title, cleanUrl);
-                
+                // ✅ Clean URL
+                window.history.replaceState({}, '', CONFIG.RETURN_URL);
                 return true;
             } catch (e) {
                 console.error('❌ Restore error:', e);
@@ -251,8 +237,7 @@ function checkPaymentReturn() {
             }
         }
         
-        const cleanUrl = CONFIG.RETURN_URL;
-        window.history.replaceState({}, document.title, cleanUrl);
+        window.history.replaceState({}, '', CONFIG.RETURN_URL);
         return true;
     }
     
@@ -271,15 +256,19 @@ async function submitRegistration(formData, isPostPayment = false) {
     showLoader(actionText);
     
     try {
+        // ✅ Collect final data (merge payment info if post-payment)
         const finalData = isPostPayment ? collectFormData(true) : formData;
+        
         await submitToGoogleSheets(finalData);
         
+        // ✅ Show appropriate success message
         const isAudit = finalData.form_type === 'audit';
         document.getElementById('successTitle').textContent = isAudit ? 'Registration Confirmed! 🎉' : 'Thank You! ✨';
         document.getElementById('successText').textContent = isAudit 
             ? 'Your audit slot is booked. Check your email for details.' 
             : 'Your feedback has been submitted successfully.';
         
+        // ✅ Show receipt ONLY for audit payments
         if (isAudit) {
             document.getElementById('receiptSection').classList.remove('hidden');
             document.getElementById('receiptName').textContent = finalData.name;
@@ -288,8 +277,11 @@ async function submitRegistration(formData, isPostPayment = false) {
             document.getElementById('receiptAmount').textContent = finalData.amount;
         }
         
+        // ✅ Switch to success view
         form.classList.add('hidden');
         successMsg.classList.remove('hidden');
+        
+        // ✅ Clear temporary storage
         sessionStorage.removeItem('pendingAuditData');
         
         showToast(isAudit ? 'Payment successful!' : 'Feedback submitted!', 'success');
@@ -297,6 +289,8 @@ async function submitRegistration(formData, isPostPayment = false) {
     } catch (error) {
         console.error('❌ Submission failed:', error);
         showToast('Data saved locally. Will sync when online.', 'warning');
+        
+        // ✅ Still show success for better UX (data is backed up)
         form.classList.add('hidden');
         successMsg.classList.remove('hidden');
         
@@ -307,7 +301,7 @@ async function submitRegistration(formData, isPostPayment = false) {
 }
 
 // ============================================================================
-// FORM SUBMIT HANDLER
+// FORM SUBMIT HANDLER - MAIN ENTRY POINT
 // ============================================================================
 
 async function handleSubmit(e) {
@@ -319,24 +313,28 @@ async function handleSubmit(e) {
     const formData = collectFormData();
     const formType = formData.form_type;
     
+    console.log('🎯 Form submitted:', { form_type: formType });
+    
     if (formType === 'audit') {
-        console.log('🎯 Audit flow initiated');
+        // 🔹 AUDIT FLOW: Payment first, then submit
         await initiateRazorpayPayment(formData);
     } else {
-        console.log('🎯 Feedback flow initiated');
+        // 🔹 FEEDBACK FLOW: Direct submit
         await submitRegistration(formData, false);
     }
 }
 
 // ============================================================================
-// EVENT LISTENERS & INIT
+// EVENT LISTENERS & INITIALIZATION
 // ============================================================================
 
+// ✅ Live validation on blur/input
 form.querySelectorAll('input, select, textarea').forEach(field => {
     field.addEventListener('blur', () => validateField(field));
     field.addEventListener('input', () => field.classList.remove('invalid'));
 });
 
+// ✅ Star rating keyboard accessibility
 document.querySelectorAll('.star-rating label').forEach(label => {
     label.setAttribute('tabindex', '0');
     label.addEventListener('keydown', (e) => {
@@ -347,14 +345,19 @@ document.querySelectorAll('.star-rating label').forEach(label => {
     });
 });
 
+// ✅ Form submit handler
 form.addEventListener('submit', handleSubmit);
 
+// ✅ Page load: Check if returning from Razorpay payment
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 Unified form initialized');
+    
+    // ✅ Critical: Check payment return FIRST
     const paymentDetected = checkPaymentReturn();
+    
     if (!paymentDetected) {
         console.log('ℹ️ Normal page load (not payment return)');
     }
 });
 
-console.log('✅ Event Registration System Ready - Data stores in Google Sheet by form_type');
+console.log('✅ Event Registration System Ready - Data stores by form_type');
