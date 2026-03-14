@@ -2,7 +2,7 @@
 // UNIFIED FORM - COMPLETE & PROPER VERSION
 // ============================================================================
 const CONFIG = {
-  GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbxUs7HMjL4Ol5YZHTFWYB0gj5u16AxCZGtLmCb6tMpLiJ0xoFLPV5gi-tyFxyT0THWOyA/exec",
+  GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbw24p7E0jthtygquAy1hUAG56ALFA81cuYNDM4tGJ9YxcIlqRZz5mF3-nW7xDO68tJNzA/exec",
   RAZORPAY_LINK: "https://rzp.io/rzp/5NCrTAI",
   RETURN_URL: window.location.origin + window.location.pathname
 };
@@ -110,15 +110,24 @@ function collectFormData(isPostPayment = false) {
   const formType = document.querySelector('input[name="form_type"]:checked').value;
   const rating = document.querySelector('input[name="rating"]:checked')?.value || 'Not rated';
   
+  // Get current time in IST format
+  const now = new Date();
+  const istTime = now.toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+  
   const formData = {
     submission_id: generateSubmissionId(),
-    server_time: new Date().toISOString(),
-    client_timestamp: new Date().toISOString(),
-    local_time_ist: new Date().toLocaleString('en-IN', {
-      timeZone: 'Asia/Kolkata',
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
-    }),
+    server_time: istTime,  // IST formatted time
+    client_timestamp: now.toISOString(),
+    local_time_ist: istTime,
     name: document.getElementById('name').value.trim(),
     company: document.getElementById('company').value.trim(),
     company_size: document.getElementById('employees').value,
@@ -136,10 +145,11 @@ function collectFormData(isPostPayment = false) {
     razorpay_order_id: paymentData.razorpay_order_id || (formType === 'audit' ? 'Pending' : 'N/A'),
     submission_source: isPostPayment ? 'Post-Payment' : 'Direct-Submit',
     registration_complete: formType === 'feedback' ? 'Yes' : (isPostPayment ? 'Yes' : 'Pending Payment'),
-    processed_at: new Date().toISOString()
+    processed_at: now.toISOString()
   };
   
   console.log('📋 Complete form data collected:', formData);
+  console.log('🕐 IST Time being sent:', istTime);
   return formData;
 }
 
