@@ -1,12 +1,11 @@
 // ============================================================================
-// UNIFIED FORM - NO PAYMENT VERSION
+// UNIFIED FORM - NO PAYMENT VERSION (FIXED)
 // ============================================================================
 const CONFIG = {
-GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbxCaxMEtlOUQ_GVGA73N-OcSc2QGn8RCxwwlrE4Yg-Cm6pcsm61RYS8IpuM1tDgTrEHzA/exec",
+GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbzSV5Rient4UfUGIopQJO3DTI3h7AQ8HHT2wDVDKO7GrTPBU9fYOPzmQpG59y-86jZd2Q/exec",
 RETURN_URL: window.location.origin + window.location.pathname
 };
 
-// DOM Elements
 const form = document.getElementById('unifiedForm');
 const submitBtn = document.getElementById('submitBtn');
 const btnText = document.getElementById('btnText');
@@ -15,12 +14,8 @@ const toast = document.getElementById('toast');
 const loader = document.getElementById('loader');
 const loaderText = document.getElementById('loaderText');
 
-// State
 let isSubmitting = false;
 
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
 function showToast(message, type = 'info') {
 toast.textContent = message;
 toast.className = `toast ${type}`;
@@ -73,34 +68,23 @@ isValid = false;
 return isValid;
 }
 
-// Generate unique submission ID
 function generateSubmissionId() {
 const timestamp = Date.now();
 const random = Math.random().toString(36).substr(2, 9).toUpperCase();
 return `SUB_${timestamp}_${random}`;
 }
 
-// ============================================================================
-// DATA COLLECTION
-// ============================================================================
 function collectFormData() {
 const wantAudit = document.querySelector('input[name="want_audit"]:checked')?.value || 'No';
 const rating = document.querySelector('input[name="rating"]:checked')?.value || 'Not rated';
-
-// Get current time in IST format
 const now = new Date();
 const istTime = now.toLocaleString('en-IN', {
 timeZone: 'Asia/Kolkata',
-year: 'numeric',
-month: '2-digit',
-day: '2-digit',
-hour: '2-digit',
-minute: '2-digit',
-second: '2-digit',
-hour12: false
+year: 'numeric', month: '2-digit', day: '2-digit',
+hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
 });
 
-const formData = {
+return {
 submission_id: generateSubmissionId(),
 server_time: istTime,
 client_timestamp: now.toISOString(),
@@ -117,77 +101,51 @@ want_audit: wantAudit,
 submission_source: 'Direct-Submit',
 processed_at: now.toISOString()
 };
-
-console.log('📋 Complete form data collected:', formData);
-return formData;
 }
 
-// ============================================================================
-// GOOGLE SHEETS SUBMISSION
-// ============================================================================
 async function submitToGoogleSheets(data) {
 console.log('📤 Sending to Google Sheets:', data);
 const submittedIds = JSON.parse(localStorage.getItem('submittedIds') || '[]');
 if (submittedIds.includes(data.submission_id)) {
-console.log('⚠️ Duplicate submission detected, skipping...');
+console.log('⚠️ Duplicate submission detected');
 return true;
 }
 try {
 const formData = new FormData();
-Object.keys(data).forEach(key => {
-formData.append(key, data[key]);
-});
+Object.keys(data).forEach(key => formData.append(key, data[key]));
 formData.append('payload', JSON.stringify(data));
 
-const response = await fetch(CONFIG.GOOGLE_SCRIPT, {
+await fetch(CONFIG.GOOGLE_SCRIPT, {
 method: 'POST',
 mode: 'no-cors',
 body: formData
 });
 
-console.log('✅ Data sent successfully to Google Sheets');
+console.log('✅ Data sent to Google Sheets');
 submittedIds.push(data.submission_id);
-localStorage.setItem('submittedIds', JSON.stringify(submittedIds));
-if (submittedIds.length > 100) {
-submittedIds.shift();
-localStorage.setItem('submittedIds', JSON.stringify(submittedIds));
-}
+localStorage.setItem('submittedIds', JSON.stringify(submittedIds.slice(-100)));
 return true;
 } catch (error) {
-console.error('❌ Error sending to Google Sheets:', error);
+console.error('❌ Error:', error);
 throw error;
 }
 }
 
-// ============================================================================
-// SHOW SUCCESS PAGE
-// ============================================================================
 function showSuccessPage(data) {
 form.classList.add('hidden');
 successMsg.classList.remove('hidden');
-
-// Display user email for confirmation
 document.getElementById('userEmailDisplay').textContent = data.email;
-
-// Simple Success Message (No Payment Receipt)
 document.getElementById('successTitle').textContent = 'Thank You!';
 document.getElementById('successText').textContent = 'Your feedback has been submitted successfully. Check your email for 2 important PDFs!';
 document.getElementById('receiptSection').classList.add('hidden');
-
 window.scrollTo({ top: 0, behavior: 'smooth' });
 showToast('Registration complete! Check your email 📧', 'success');
 }
 
-// ============================================================================
-// FORM SUBMIT HANDLER
-// ============================================================================
 let submitTimeout;
 async function handleSubmit(e) {
 e.preventDefault();
-if (isSubmitting) {
-showToast('Please wait, processing...', 'warning');
-return;
-}
+if (isSubmitting) { showToast('Please wait...', 'warning'); return; }
 if (!validateForm()) return;
 
 isSubmitting = true;
@@ -198,20 +156,13 @@ submitTimeout = setTimeout(async () => {
 try {
 const formData = collectFormData();
 console.log('📋 Submitting:', formData);
-
-// Show Loader
 showLoader('Submitting your feedback...');
-
-// Submit to Google Sheets
 await submitToGoogleSheets(formData);
-
-// Show Success
 hideLoader();
 showSuccessPage(formData);
-
 } catch (error) {
-console.error('❌ Submission error:', error);
-showToast('Error submitting form. Please try again.', 'error');
+console.error('❌ Error:', error);
+showToast('Error submitting. Please try again.', 'error');
 hideLoader();
 isSubmitting = false;
 submitBtn.disabled = false;
@@ -219,30 +170,18 @@ submitBtn.disabled = false;
 }, 300);
 }
 
-// ============================================================================
-// EVENT LISTENERS
-// ============================================================================
 form.querySelectorAll('input, select, textarea').forEach(field => {
 field.addEventListener('blur', () => validateField(field));
 field.addEventListener('input', () => field.classList.remove('invalid'));
 });
-
 form.addEventListener('submit', handleSubmit);
+window.addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 
-window.addEventListener('pageshow', function(event) {
-if (event.persisted) {
-window.location.reload();
-}
-});
-
-// ============================================================================
-// INITIALIZATION
-// ============================================================================
 document.addEventListener('DOMContentLoaded', () => {
-console.log('🚀 Form initialized - No Payment Version');
-if (window.location.search) {
+console.log('🚀 Form initialized - PDF Attachment Fixed');
+if (location.search) {
 const cleanUrl = CONFIG.RETURN_URL.split('?')[0];
-window.history.replaceState({}, document.title, cleanUrl);
+history.replaceState({}, document.title, cleanUrl);
 }
 console.log('✅ Ready - Fully Functional');
 });
