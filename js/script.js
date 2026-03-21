@@ -4,7 +4,7 @@
 
 const CONFIG = {
   // 🔥 REPLACE WITH YOUR DEPLOYED GOOGLE APPS SCRIPT URL (NO TRAILING SPACES!)
-  GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbxj6wSirzU26-rgOe6_EvgZNneXvRDhsNKcNizmTDlGEtAH7dsQpQYwlF6aQdxQxEmEzg/exec",
+  GOOGLE_SCRIPT: "https://script.google.com/macros/s/AKfycbz0M59hqsY816GUIchtzGPWIV6OrOuJdmGIMk4-TBGEKzpuwqu0HRtFjL2UJWD_FGBXvw/exec",
   RETURN_URL: window.location.origin + window.location.pathname,
   // Optional: Fallback email notification endpoint
   FALLBACK_WEBHOOK: null 
